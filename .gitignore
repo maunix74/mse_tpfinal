@@ -3,6 +3,7 @@
 
 # Object files
 *.o
+!mbed/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/board.o
 *.ko
 *.obj
 *.elf
