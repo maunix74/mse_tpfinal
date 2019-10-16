@@ -48,6 +48,8 @@ void Task_Joystick (void* pvParameters)
     int key_read;
     uint8_t key;
     uint8_t key_ant;
+    BaseType_t xStatus;
+
     (void) pvParameters;
     for (;;) {
         led1 = !led1;
@@ -60,12 +62,22 @@ void Task_Joystick (void* pvParameters)
             case 8: key = KEY_RIGHT; break;
         }
         if (fire) key = KEY_PUSH;
-//#ifdef DEBUGENABLE_TASKJOYSTICK
         if (key != key_ant) {
-            printf(" Joy=%d\r\n",key);
+            if (key != KEY_NONE) {
+                xStatus = xQueueSendToBack(xKeysQueue, &key, 0);
+                if (xStatus != pdPASS) {
+    #ifdef DEBUGENABLE_TASKJOYSTICK
+                    printf("<JoyQueue. Error agregando elemento a la cola.\r\n",key);
+    #endif
+                } else {
+    #ifdef DEBUGENABLE_TASKJOYSTICK
+                    printf("<JoyQueue. Key: %d>\r\n",key);
+    #endif
+                }
+            }
+
             key_ant = key;
         }
-//#endif        
         //printf("Task1\n");
         vTaskDelay(500);
     }
