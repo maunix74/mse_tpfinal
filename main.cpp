@@ -8,7 +8,7 @@
 
 
 #define DEBUGENABLE_TASKJOYSTICK
-//#define DEBUGENABLE_TASKMENU
+#define DEBUGENABLE_TASKMENU
 //#define DEBUGENABLE_TASKBIPPER
 
 
@@ -79,7 +79,7 @@ void Task_Joystick (void* pvParameters)
             key_ant = key;
         }
         //printf("Task1\n");
-        vTaskDelay(500);
+        vTaskDelay(250);
     }
 }
 
@@ -100,13 +100,40 @@ void Task_Bipper (void* pvParameters)
 
 void Task_Menu (void* pvParameters)
 {
+    BaseType_t xQueueStatus;
+    uint8_t key;
+    UBaseType_t queueelements;
+
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
         led3= !led3;
         #ifdef DEBUGENABLE_TASKMENU
-        printf("<Task Menu>");
+        printf("<Task Menu: Queue elements=");
         #endif
-        vTaskDelay(1500);
+        queueelements = uxQueueMessagesWaiting(xKeysQueue);
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("%d",queueelements);
+        #endif
+        if (0 < queueelements) {
+            // La cola tiene mensaje(s)
+            xQueueStatus = xQueueReceive(xKeysQueue, &key, 5);
+            if (xQueueStatus == pdPASS) {
+                #ifdef DEBUGENABLE_TASKMENU
+                printf(" <KeyRead= %d>",key);
+                #endif
+            } else {
+                #ifdef DEBUGENABLE_TASKMENU
+                printf(" QueKey Read Error");
+                #endif
+            }
+        } else {
+
+        }
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("\r\n");
+        #endif
+
+        vTaskDelay(2500);
     }
 }
 
@@ -143,6 +170,7 @@ int main (void)
     xTaskCreate( Task_Bipper, ( const char * ) "TaskBipper", 128, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 128, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task4, ( const char * ) "Task4", 1024, NULL, 2, ( xTaskHandle * ) NULL );
+    printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
     //should never get here
