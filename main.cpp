@@ -105,14 +105,36 @@ typedef struct  {
 
 
 // MENUS
-void fcn_temperaturamenu1_0(enum Cmd_e cmd);
-void fcn_temperaturamenu1_1(enum Cmd_e cmd);
-void fcn_temperaturamenu2_0(enum Cmd_e cmd);
-void fcn_temperaturamenu2_1(enum Cmd_e cmd);
-void fcn_temperaturamenu3_0(enum Cmd_e cmd);
-void fcn_temperaturamenu3_1(enum Cmd_e cmd);
-void fcn_temperaturamenu4_0(enum Cmd_e cmd);
-void fcn_temperaturamenu4_1(enum Cmd_e cmd);
+void menu_temperatura_ppal(enum Cmd_e cmd);
+void menu_temperatura_seltexto(enum Cmd_e cmd);
+void menu_temperatura_selgrafico(enum Cmd_e cmd);
+void menu_temperatura_printtexto(enum Cmd_e cmd);
+void menu_temperatura_printgrafico(enum Cmd_e cmd);
+void menu_acelerometro_ppal(enum Cmd_e cmd);
+void menu_acelerometro_seltexto(enum Cmd_e cmd);
+void menu_acelerometro_selgrafico(enum Cmd_e cmd);
+void menu_acelerometro_printtexto(enum Cmd_e cmd);
+void menu_acelerometro_printgrafico(enum Cmd_e cmd);
+void menu_rgb_ppal(enum Cmd_e cmd);
+void menu_rgb_selr(enum Cmd_e cmd);
+void menu_rgb_selg(enum Cmd_e cmd);
+void menu_rgb_selb(enum Cmd_e cmd);
+void menu_speaker_ppal(enum Cmd_e cmd);
+void menu_speaker_selbip1(enum Cmd_e cmd);
+void menu_speaker_selbip2(enum Cmd_e cmd);
+void menu_speaker_selbip3(enum Cmd_e cmd);
+void menu_speaker_selbipnone(enum Cmd_e cmd);
+void menu_signals_ppal(enum Cmd_e cmd);
+void menu_signals_selsquarewave(enum Cmd_e cmd);
+void menu_signals_selsinewave(enum Cmd_e cmd);
+void menu_signals_printsquarewave(enum Cmd_e cmd);
+void menu_signals_printsinewave(enum Cmd_e cmd);
+void menu_rgb_rmenos(enum Cmd_e cmd);
+void menu_rgb_rmas(enum Cmd_e cmd);
+void menu_rgb_gmenos(enum Cmd_e cmd);
+void menu_rgb_gmas(enum Cmd_e cmd);
+void menu_rgb_bmenos(enum Cmd_e cmd);
+void menu_rgb_bmas(enum Cmd_e cmd);
 
 // <-----  FIN MENUS ------
 
@@ -122,7 +144,7 @@ void Task_Menu (void* pvParameters)
     BaseType_t xQueueStatus;
     uint8_t key, key_ant;
     UBaseType_t queueelements;
-
+/*
     Tmenuitem menuitems[] = {
         {1, 1, 2, 3, 5, fcn_temperaturamenu1_0},
         {1, 1, 2, 3, 5, fcn_temperaturamenu1_1},
@@ -134,6 +156,40 @@ void Task_Menu (void* pvParameters)
         {1, 1, 2, 3, 5, fcn_temperaturamenu4_1}
             
     };
+*/
+    Tmenuitem menuitems[] = {
+{MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal,},
+{MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto,},
+{MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_PRINTGRAFICO,menu_temperatura_selgrafico,},
+{MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printtexto,},
+{MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printgrafico,},
+{MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_ACELEROMETRO_SELTEXTO,menu_acelerometro_ppal,},
+{MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_PRINTTEXTO,menu_acelerometro_seltexto,},
+{MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_PRINTGRAFICO,menu_acelerometro_selgrafico,},
+{MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printtexto,},
+{MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printgrafico,},
+{MENU_ACELEROMETRO_PPAL,MENU_SPEAKER_PPAL,MENU_NONE,MENU_NONE,MENU_RGB_SELR,menu_rgb_ppal,},
+{MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELG,menu_rgb_selr,},
+{MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELB,menu_rgb_selg,},
+{MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_SPEAKER_PPAL,menu_rgb_selb,},
+{MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_NONE,MENU_NONE,MENU_SPEAKER_SELBIP1,menu_speaker_ppal,},
+{MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip1,},
+{MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbip2,},
+{MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP2,MENU_SPEAKER_SELBIPNONE,MENU_SIGNALS_PPAL,menu_speaker_selbip3,},
+{MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP3,MENU_SPEAKER_SELBIP1,MENU_SIGNALS_PPAL,menu_speaker_selbipnone,},
+{MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_SIGNALS_SELSQUAREWAVE,menu_signals_ppal,},
+{MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_PRINTSQUAREWAVE,menu_signals_selsquarewave,},
+{MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave,},
+{MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave,},
+{MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmas,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmenos,},
+{MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas,}
+    };
+
             
     (void) pvParameters;                    // Just to stop compiler warnings.
 
