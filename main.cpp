@@ -23,15 +23,12 @@ C12832 lcd(p5,p7,p6,p8,p11);
 AnalogIn pot1(p19);
 AnalogIn pot2(p20);
 PwmOut spkr(p26);
+PwmOut r(p23);
+PwmOut g(p24);
+PwmOut b(p25);
+
 
 static uint16_t task4loop=0;
-
-
-typedef enum Color_t {
-  RED,
-  GREEN,
-  BLUE
-} Color_t;
 
 QueueHandle_t colorQueue;
 
@@ -114,6 +111,11 @@ typedef struct {
     enum MenuSm_e sm;
     uint8_t idx;
     uint8_t idx_ant; // para saber si debo inicializar o no o si estoy en el mismo menu
+    uint8_t idx_tmp;  // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
+    Beeps bip;
+    float r;
+    float g;
+    float b;
 } Tmenu;
 
 Tmenu menu;
@@ -389,7 +391,16 @@ void menu_temperatura_seltexto(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.locate(0, 0);
+            lcd.printf("Temperatura");
+            lcd.locate(30, 11);
+            lcd.printf(">  Texto  <");
+            lcd.locate(30, 22);
+            lcd.printf("  Grafico  ");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
@@ -576,6 +587,7 @@ void menu_rgb_ppal(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
+            
             break;
         }
 
@@ -590,6 +602,24 @@ void menu_rgb_selr(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            lcd.cls();
+            lcd.set_font((unsigned char*) Small_7);
+            lcd.locate(0,0);
+            lcd.printf("R");
+            lcd.locate(0,11);
+            lcd.printf("G");
+            lcd.locate(0,21);
+            lcd.printf("B");
+
+            lcd.locate(20,0);
+            lcd.printf("%f",menu.r);
+            lcd.locate(20,11);
+            lcd.printf("%f",menu.g);
+            lcd.locate(20,21);
+            lcd.printf("%f",menu.b);
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
+
 
             break;
         }
@@ -849,7 +879,13 @@ void menu_rgb_rmenos(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            printf("R- %f\r\n",menu.r);
+            if (menu.r > 0.01) {
+                menu.r -= 0.01;
+            }
+            menu.idx_tmp = MENU_RGB_SELR;
+//            menu.idx = MENU_RGB_SELR;
+//            menu.sm = MENUSM_INITIALIZE;
             break;
         }
 
@@ -868,6 +904,12 @@ void menu_rgb_rmas(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            printf("R+ %f\r\n",menu.r);
+            if (menu.r < 1.0) {
+                menu.r += 0.01;
+            }
+            menu.idx_tmp = MENU_RGB_SELR;
+            //menu.sm = MENUSM_INITIALIZE;
 
             break;
         }
@@ -965,7 +1007,6 @@ void Task_Menu (void* pvParameters)
     BaseType_t xQueueStatus;
     uint8_t key, key_ant;
     UBaseType_t queueelements;
-    uint8_t menu_tmp;  // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
     Tmenuitem menuitems[] = {
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto},
@@ -991,19 +1032,23 @@ void Task_Menu (void* pvParameters)
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave},
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave},
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmas},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmenos},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas}
+        {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos},
+        {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas},
+        {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos},
+        {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmas},
+        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmenos},
+        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas}
     };
 
     Tmenuitem * menuitem;
 
     menu.sm  = MENUSM_INITIALIZE;
     menu.idx = MENU_TEMPERATURA_PPAL;
-    menu_tmp = MENU_TEMPERATURA_PPAL;
+    menu.idx_tmp = MENU_TEMPERATURA_PPAL;
+    menu.r = 0.50;
+    menu.g = 0.50;
+    menu.b = 0.50;
+    menu.bip = KEY_BIP1;
     menuitem = &menuitems[0];
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
@@ -1014,11 +1059,11 @@ void Task_Menu (void* pvParameters)
     for (;;) {
         led3= !led3;
         #ifdef DEBUGENABLE_TASKMENU
-        printf("<Task Menu: Queue elements=");
+        //printf("<Task Menu: Queue elements=");
         #endif
         queueelements = uxQueueMessagesWaiting(xKeysQueue);
         #ifdef DEBUGENABLE_TASKMENU
-        printf("%d\r\n",queueelements);
+        //printf("%d\r\n",queueelements);
         #endif
         key = KEY_NONE;
         if (0 < queueelements) {
@@ -1026,41 +1071,38 @@ void Task_Menu (void* pvParameters)
             xQueueStatus = xQueueReceive(xKeysQueue, &key, 5);
             if (xQueueStatus == pdPASS) {
                 #ifdef DEBUGENABLE_TASKMENU
-                printf(" <KeyRead= %d>",key);
+                printf(" <KeyRead= %d>\r\n",key);
                 #endif
             } else {
                 #ifdef DEBUGENABLE_TASKMENU
-                printf(" QueKey Read Error");
+                printf(" QueKey Read Error\r\n");
                 #endif
             }
         }
-        #ifdef DEBUGENABLE_TASKMENU
-        printf("\r\n");
-        #endif
-
 
         if (key != key_ant) {
             switch(key) {
-                case KEY_UP: {menu_tmp = menuitem->keyup; break;}
-                case KEY_DOWN: {menu_tmp = menuitem->keydown; break;}
-                case KEY_LEFT: {menu_tmp = menuitem->keyleft; break;}
-                case KEY_RIGHT: {menu_tmp = menuitem->keyright; break;}
-                case KEY_PUSH: {menu_tmp = menuitem->keyfire; break;}
+                case KEY_UP: {menu.idx_tmp = menuitem->keyup; break;}
+                case KEY_DOWN: {menu.idx_tmp = menuitem->keydown; break;}
+                case KEY_LEFT: {menu.idx_tmp = menuitem->keyleft; break;}
+                case KEY_RIGHT: {menu.idx_tmp = menuitem->keyright; break;}
+                case KEY_PUSH: {menu.idx_tmp = menuitem->keyfire; break;}
             }
-        #ifdef DEBUGENABLE_TASKMENU
-        printf("MenuTMP = %d\r\n",menu_tmp);
-        #endif
         } 
         
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("MenuTMP = %d\r\n",menu.idx_tmp);
+        #endif
+
         menuitem = &menuitems[0];
         menuitem += menu.idx;
-        if (menu_tmp != MENU_NONE) {
-            if (menu_tmp != menu.idx) {
+        if (menu.idx_tmp != MENU_NONE) {
+            if (menu.idx_tmp != menu.idx) {
                 // Se debe pasar de menu
         #ifdef DEBUGENABLE_TASKMENU
-        printf("Cambio de Menu\r\n",menu_tmp);
+        printf("Cambio de Menu\r\n",menu.idx_tmp);
         #endif
-                menu.idx = menu_tmp;
+                menu.idx = menu.idx_tmp;
                 menuitem = &menuitems[0];
                 menuitem += menu.idx;
                 (*menuitem->func_ptr)(CMD_INITIALIZE);
@@ -1071,10 +1113,10 @@ void Task_Menu (void* pvParameters)
         }
     
         #ifdef DEBUGENABLE_TASKMENU
-        printf("Menu IDX=%d SM=%d\r\n",menu.idx, menu.sm);
+        printf("Menu IDX=%d SM=%d idx_tmp=%d\r\n",menu.idx, menu.sm, menu.idx_tmp);
         #endif
 
-        vTaskDelay(2500);
+        vTaskDelay(500);
     }
 }
 
@@ -1103,9 +1145,7 @@ void Task_Joystick (void* pvParameters)
         if (key != key_ant) {
             if (key != KEY_NONE) {
                 xStatus = xQueueSendToBack(xKeysQueue, &key, 0);
-                bip++;
-                if (bip>3) bip=1;
-                xStatus = xQueueSendToBack(xBeeperQueue, &bip, 0);
+                xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
                 if (xStatus != pdPASS) {
     #ifdef DEBUGENABLE_TASKJOYSTICK
                     printf("<JoyQueue. Error agregando elemento a la cola.\r\n",key);
