@@ -53,6 +53,128 @@ typedef enum Beeps {
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
 
+typedef enum MenuList {
+    MENU_TEMPERATURA_PPAL,
+    MENU_TEMPERATURA_SELTEXTO,
+    MENU_TEMPERATURA_SELGRAFICO,
+    MENU_TEMPERATURA_PRINTTEXTO,
+    MENU_TEMPERATURA_PRINTGRAFICO,
+    MENU_ACELEROMETRO_PPAL,
+    MENU_ACELEROMETRO_SELTEXTO,
+    MENU_ACELEROMETRO_SELGRAFICO,
+    MENU_ACELEROMETRO_PRINTTEXTO,
+    MENU_ACELEROMETRO_PRINTGRAFICO,
+    MENU_RGB_PPAL,
+    MENU_RGB_SELR,
+    MENU_RGB_SELG,
+    MENU_RGB_SELB,
+    MENU_SPEAKER_PPAL,
+    MENU_SPEAKER_SELBIP1,
+    MENU_SPEAKER_SELBIP2,
+    MENU_SPEAKER_SELBIP3,
+    MENU_SPEAKER_SELBIPNONE,
+    MENU_SIGNALS_PPAL,
+    MENU_SIGNALS_SELSQUAREWAVE,
+    MENU_SIGNALS_SELSINEWAVE,
+    MENU_SIGNALS_PRINTSQUAREWAVE,
+    MENU_SIGNALS_PRINTSINEWAVE,
+    MENU_RGB_RMENOS,
+    MENU_RGB_RMAS,
+    MENU_RGB_GMENOS,
+    MENU_RGB_GMAS,
+    MENU_RGB_BMENOS,
+    MENU_RGB_BMAS,
+    MENU_NONE = 0xFF
+
+};
+
+enum Cmd_e {
+    CMD_INITIALIZE,    // Indica que la funcion debe inicializar el menu
+    CMD_NONE           // indica que la funcion esta ejecutandose en ciclo normal
+};
+
+typedef struct  {
+  uint8_t keyup;
+  uint8_t keydown;
+  uint8_t keyleft;
+  uint8_t keyright;
+  uint8_t keyfire;
+  void (*func_ptr)(enum Cmd_e);
+} Tmenuitem;
+
+
+
+// MENUS
+void fcn_temperaturamenu1_0(enum Cmd_e cmd);
+void fcn_temperaturamenu1_1(enum Cmd_e cmd);
+void fcn_temperaturamenu2_0(enum Cmd_e cmd);
+void fcn_temperaturamenu2_1(enum Cmd_e cmd);
+void fcn_temperaturamenu3_0(enum Cmd_e cmd);
+void fcn_temperaturamenu3_1(enum Cmd_e cmd);
+void fcn_temperaturamenu4_0(enum Cmd_e cmd);
+void fcn_temperaturamenu4_1(enum Cmd_e cmd);
+
+// <-----  FIN MENUS ------
+
+
+void Task_Menu (void* pvParameters)
+{
+    BaseType_t xQueueStatus;
+    uint8_t key, key_ant;
+    UBaseType_t queueelements;
+
+    Tmenuitem menuitems[] = {
+        {1, 1, 2, 3, 5, fcn_temperaturamenu1_0},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu1_1},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu2_0},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu2_1},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu3_0},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu3_1},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu4_0},
+        {1, 1, 2, 3, 5, fcn_temperaturamenu4_1}
+            
+    };
+            
+    (void) pvParameters;                    // Just to stop compiler warnings.
+
+
+    for (;;) {
+        led3= !led3;
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("<Task Menu: Queue elements=");
+        #endif
+        queueelements = uxQueueMessagesWaiting(xKeysQueue);
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("%d",queueelements);
+        #endif
+        key = KEY_NONE;
+        if (0 < queueelements) {
+            // La cola tiene mensaje(s)
+            xQueueStatus = xQueueReceive(xKeysQueue, &key, 5);
+            if (xQueueStatus == pdPASS) {
+                #ifdef DEBUGENABLE_TASKMENU
+                printf(" <KeyRead= %d>",key);
+                #endif
+            } else {
+                #ifdef DEBUGENABLE_TASKMENU
+                printf(" QueKey Read Error");
+                #endif
+            }
+        }
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("\r\n");
+        #endif
+
+        if (key != key_ant) {
+            // evaluar nueva opcion de menu
+
+        }
+
+        vTaskDelay(2500);
+    }
+}
+
+
 
 void Task_Joystick (void* pvParameters)
 {
@@ -137,48 +259,7 @@ void Task_Beeper (void* pvParameters)
 }
 
 
-void Task_Menu (void* pvParameters)
-{
-    BaseType_t xQueueStatus;
-    uint8_t key, key_ant;
-    UBaseType_t queueelements;
 
-    (void) pvParameters;                    // Just to stop compiler warnings.
-    for (;;) {
-        led3= !led3;
-        #ifdef DEBUGENABLE_TASKMENU
-        printf("<Task Menu: Queue elements=");
-        #endif
-        queueelements = uxQueueMessagesWaiting(xKeysQueue);
-        #ifdef DEBUGENABLE_TASKMENU
-        printf("%d",queueelements);
-        #endif
-        key = KEY_NONE;
-        if (0 < queueelements) {
-            // La cola tiene mensaje(s)
-            xQueueStatus = xQueueReceive(xKeysQueue, &key, 5);
-            if (xQueueStatus == pdPASS) {
-                #ifdef DEBUGENABLE_TASKMENU
-                printf(" <KeyRead= %d>",key);
-                #endif
-            } else {
-                #ifdef DEBUGENABLE_TASKMENU
-                printf(" QueKey Read Error");
-                #endif
-            }
-        }
-        #ifdef DEBUGENABLE_TASKMENU
-        printf("\r\n");
-        #endif
-
-        if (key != key_ant) {
-            // evaluar nueva opcion de menu
-
-        }
-
-        vTaskDelay(2500);
-    }
-}
 
 
 void Task4 (void* pvParameters)
@@ -205,6 +286,13 @@ void Task4 (void* pvParameters)
         vTaskDelay(1200);
     }
 }
+
+
+
+
+
+
+
 
 int main (void)
 {
