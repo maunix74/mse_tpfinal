@@ -9,8 +9,8 @@
 
 
 #define DEBUGENABLE_TASKJOYSTICK
-//#define DEBUGENABLE_TASKMENU
-#define DEBUGENABLE_TASKBEEPER
+#define DEBUGENABLE_TASKMENU
+//#define DEBUGENABLE_TASKBEEPER
 
 
 DigitalOut led1(LED1);
@@ -101,10 +101,10 @@ enum MenuSm_e {
 
 
 typedef struct Tmenuitem {
-  uint8_t keyup;
-  uint8_t keydown;
   uint8_t keyleft;
   uint8_t keyright;
+  uint8_t keyup;
+  uint8_t keydown;
   uint8_t keyfire;
   void (*func_ptr)(enum Cmd_e);
 };
@@ -113,6 +113,7 @@ typedef struct Tmenuitem {
 typedef struct {
     enum MenuSm_e sm;
     uint8_t idx;
+    uint8_t idx_ant; // para saber si debo inicializar o no o si estoy en el mismo menu
 } Tmenu;
 
 Tmenu menu;
@@ -964,6 +965,7 @@ void Task_Menu (void* pvParameters)
     BaseType_t xQueueStatus;
     uint8_t key, key_ant;
     UBaseType_t queueelements;
+    uint8_t menu_tmp;  // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
     Tmenuitem menuitems[] = {
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto},
@@ -1001,6 +1003,10 @@ void Task_Menu (void* pvParameters)
 
     menu.sm  = MENUSM_INITIALIZE;
     menu.idx = MENU_TEMPERATURA_PPAL;
+    menu_tmp = MENU_TEMPERATURA_PPAL;
+    menuitem = &menuitems[0];
+    menuitem += menu.idx;
+    (*menuitem->func_ptr)(CMD_INITIALIZE);
           
     (void) pvParameters;                    // Just to stop compiler warnings.
 
@@ -1012,7 +1018,7 @@ void Task_Menu (void* pvParameters)
         #endif
         queueelements = uxQueueMessagesWaiting(xKeysQueue);
         #ifdef DEBUGENABLE_TASKMENU
-        printf("%d",queueelements);
+        printf("%d\r\n",queueelements);
         #endif
         key = KEY_NONE;
         if (0 < queueelements) {
@@ -1032,13 +1038,36 @@ void Task_Menu (void* pvParameters)
         printf("\r\n");
         #endif
 
-        menuitem = &menuitems[0];
-        menuitem += menu.idx;
 
         if (key != key_ant) {
-           (*menuitem->func_ptr)(CMD_INITIALIZE);
-        } else {
-           (*menuitem->func_ptr)(CMD_NONE);
+            switch(key) {
+                case KEY_UP: {menu_tmp = menuitem->keyup; break;}
+                case KEY_DOWN: {menu_tmp = menuitem->keydown; break;}
+                case KEY_LEFT: {menu_tmp = menuitem->keyleft; break;}
+                case KEY_RIGHT: {menu_tmp = menuitem->keyright; break;}
+                case KEY_PUSH: {menu_tmp = menuitem->keyfire; break;}
+            }
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("MenuTMP = %d\r\n",menu_tmp);
+        #endif
+        } 
+        
+        menuitem = &menuitems[0];
+        menuitem += menu.idx;
+        if (menu_tmp != MENU_NONE) {
+            if (menu_tmp != menu.idx) {
+                // Se debe pasar de menu
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("Cambio de Menu\r\n",menu_tmp);
+        #endif
+                menu.idx = menu_tmp;
+                menuitem = &menuitems[0];
+                menuitem += menu.idx;
+                (*menuitem->func_ptr)(CMD_INITIALIZE);
+
+            } else {
+                (*menuitem->func_ptr)(CMD_NONE);
+            }
         }
     
         #ifdef DEBUGENABLE_TASKMENU
@@ -1148,6 +1177,7 @@ void Task4 (void* pvParameters)
         
         pote1 = pot1.read();
         pote2 = pot2.read();
+        /*
         lcd.cls();
         lcd.locate(1,1);
         lcd.printf("Ciclo Task #%d",task4loop);
@@ -1157,7 +1187,7 @@ void Task4 (void* pvParameters)
         lcd.locate(1,22);
         lcd.printf("  Pote2=%f",pote2);
         lcd.copy_to_lcd();
-        
+        */
         vTaskDelay(1200);
     }
 }
@@ -1176,8 +1206,8 @@ int main (void)
 
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 256, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 128, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task4, ( const char * ) "Task4", 1024, NULL, 2, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1024, NULL, 1, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task4, ( const char * ) "Task4", 256, NULL, 2, ( xTaskHandle * ) NULL );
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
