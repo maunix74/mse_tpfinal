@@ -13,6 +13,7 @@
 //#define DEBUGENABLE_TASKBEEPER
 
 
+
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 DigitalOut led3(LED3);
@@ -28,6 +29,9 @@ PwmOut g(p24);
 PwmOut b(p25);
 
 #define CTE_RGBINCREMENT 0.1
+#define CTE_HISTORYSIZE  120
+#define CTE_XSTEPMIN 5.0
+#define CTE_XSTEPMAX 30.0
 
 static uint16_t task4loop=0;
 
@@ -107,6 +111,7 @@ typedef struct Tmenuitem {
 };
 
 
+
 typedef struct {
     enum MenuSm_e sm;
     uint8_t idx;
@@ -121,16 +126,32 @@ typedef struct {
     float b_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
     uint8_t updatestatus;  // indica el estado del update de pantalla para saber si debo reimprimir el menu o no
 
-    float x_scale;
-    float y_scale;
+    struct {
+       float x_scale;
+       float y_scale;
+       int8_t  historia[CTE_HISTORYSIZE];
+       uint8_t historysize;
+       uint8_t idx_puntoactual;
+       float x_pos;
+       float y_pos;
+    } grafico;
 } Tmenu;
+
+
+struct {
+    int x_loop;
+    int y_result; 
+    float y_temp;
+} grafico;
 
 Tmenu menu;
 
+
+//-------------------------------------------
 // FONTS
-
+//-------------------------------------------
 // Small 7
-
+// 
 const unsigned char Small_7[] = {
     19,9,9,2,                                    // Length,horz,vert,byte/vert
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Code for char
@@ -1045,6 +1066,8 @@ void menu_signals_selsquarewave(enum Cmd_e cmd)
 };
 
 
+
+
 void menu_signals_selsinewave(enum Cmd_e cmd)
 {
     if (cmd == CMD_INITIALIZE) {
@@ -1066,6 +1089,7 @@ void menu_signals_selsinewave(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
+
             break;
         }
 
@@ -1091,19 +1115,57 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
     }
 };
 
-
 void menu_signals_printsinewave(enum Cmd_e cmd)
 {
+    int y;
+    uint8_t loop;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            lcd.cls();
+            //lcd.set_font((unsigned char*) Small_7);
+            //lcd.locate(0, 0);
+            //lcd.printf("Signals");
+            //lcd.copy_to_lcd(); // update lcd
+
+            menu.grafico.historysize = 0;
+            menu.grafico.idx_puntoactual = 0;
+            menu.grafico.x_pos = 0.0;
+            menu.sm = MENUSM_LOOP;
 
             break;
         }
 
         case MENUSM_LOOP: {
+//            if (menu.grafico.historysize < CTE_HISTORYSIZE) {
+            if (menu.grafico.idx_puntoactual < CTE_HISTORYSIZE) {
+                menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
+                menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
+                menu.grafico.x_pos += menu.grafico.x_scale;
+                lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[menu.grafico.idx_puntoactual],1);
+                menu.grafico.idx_puntoactual++;
+                lcd.copy_to_lcd(); // update lcd
+            } else {
+                lcd.cls();
+                for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
+                    //lcd.pixel(loop,menu.grafico.historia[loop],0);
+                    //lcd.copy_to_lcd(); // update lcd
+                    menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
+                    lcd.pixel(loop,menu.grafico.historia[loop],1);
+                }
+                menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
+                menu.grafico.historia[CTE_HISTORYSIZE-1] = y;
+                menu.grafico.x_pos += menu.grafico.x_scale;
+                //lcd.pixel(loop,menu.grafico.historia[CTE_HISTORYSIZE-1],0);
+                //lcd.copy_to_lcd(); // update lcd
+                lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
+                lcd.copy_to_lcd(); // update lcd
+            }
             break;
         }
 
@@ -1312,10 +1374,15 @@ void Task_Menu (void* pvParameters)
     r.period(0.001) ;
     g.period(0.001) ;
     b.period(0.001) ;
+    menu.grafico.historysize=0;
+
+    menu.grafico.x_scale = CTE_XSTEPMAX;
+    menu.grafico.y_scale = 1.0;
     menu.bip = KEY_BIPNONE;
     menuitem = &menuitems[0];
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
+    
           
     (void) pvParameters;                    // Just to stop compiler warnings.
 
