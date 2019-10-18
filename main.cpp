@@ -65,6 +65,7 @@ typedef enum  {
     MENU_RGB_SELR,
     MENU_RGB_SELG,
     MENU_RGB_SELB,
+    MENU_RGB_EXIT,
     MENU_SPEAKER_PPAL,
     MENU_SPEAKER_SELBIP1,
     MENU_SPEAKER_SELBIP2,
@@ -113,8 +114,13 @@ typedef struct {
     uint8_t idx_tmp;  // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
     Beeps bip;
     float r;
+    float r_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
     float g;
+    float g_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
     float b;
+    float b_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
+    uint8_t updatestatus;  // indica el estado del update de pantalla para saber si debo reimprimir el menu o no
+
     float x_scale;
     float y_scale;
 } Tmenu;
@@ -344,6 +350,7 @@ void menu_rgb_ppal(enum Cmd_e cmd);
 void menu_rgb_selr(enum Cmd_e cmd);
 void menu_rgb_selg(enum Cmd_e cmd);
 void menu_rgb_selb(enum Cmd_e cmd);
+void menu_rgb_exit(enum Cmd_e cmd);
 void menu_speaker_ppal(enum Cmd_e cmd);
 void menu_speaker_selbip1(enum Cmd_e cmd);
 void menu_speaker_selbip2(enum Cmd_e cmd);
@@ -620,19 +627,34 @@ void menu_rgb_selr(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            lcd.cls();
-            lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(0,0);
-            lcd.printf("R*");
-            lcd.locate(0,11);
-            lcd.printf("G");
-            lcd.locate(0,21);
-            lcd.printf("B");
+            if (menu.updatestatus != 1) {
+                lcd.cls();
+                lcd.set_font((unsigned char*) Small_7);
+                lcd.locate(0,0);
+                lcd.printf("R*");
+                lcd.locate(0,11);
+                lcd.printf("G");
+                lcd.locate(0,21);
+                lcd.printf("B");
+                menu.updatestatus = 1;
+            }
 
-            fcn_graphbarrapje(10,0,menu.r);
-            fcn_graphbarrapje(10,11,menu.g);
-            fcn_graphbarrapje(10,21,menu.b);
-            printf("Graficar G:%f\r\n",menu.r);
+            if (menu.r != menu.r_ant) {
+                fcn_graphbarrapje(15,0,menu.r);
+                menu.r_ant = menu.r;
+            }
+
+            if (menu.g != menu.g_ant) {
+                fcn_graphbarrapje(15,11,menu.g);
+                menu.g_ant = menu.g;
+            }
+
+            if (menu.b != menu.b_ant) {
+                fcn_graphbarrapje(15,21,menu.b);
+                menu.b_ant = menu.b;
+            }
+
+            //printf("Graficar G:%f\r\n",menu.r);
             //lcd.locate(20,0);
             //lcd.printf("%f",menu.r);
             //lcd.locate(20,11);
@@ -641,11 +663,10 @@ void menu_rgb_selr(enum Cmd_e cmd)
             //lcd.printf("%f",menu.b);
             lcd.copy_to_lcd(); // update lcd
 
-            r = menu.r;
-            g = menu.g;
-            b = menu.b;
+            r = 1.0 - menu.r;
+            g = 1.0 - menu.g;
+            b = 1.0 - menu.b;
             menu.sm = MENUSM_LOOP;
-
 
             break;
         }
@@ -666,18 +687,30 @@ void menu_rgb_selg(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            lcd.cls();
-            lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(0,0);
-            lcd.printf("R");
-            lcd.locate(0,11);
-            lcd.printf("G*");
-            lcd.locate(0,21);
-            lcd.printf("B");
+            if (menu.updatestatus != 2) {
+                lcd.rect(6,0,6,10,0);
+                lcd.rect(7,0,7,10,0);
+                lcd.rect(8,0,8,10,0);
+                lcd.rect(9,0,9,10,0);
+                lcd.locate(0,11);
+                lcd.printf("G*");
+                menu.updatestatus = 2;
+            }
 
-            fcn_graphbarrapje(10,0,menu.r);
-            fcn_graphbarrapje(10,11,menu.g);
-            fcn_graphbarrapje(10,21,menu.b);
+            if (menu.r != menu.r_ant) {
+                fcn_graphbarrapje(15,0,menu.r);
+                menu.r_ant = menu.r;
+            }   
+
+            if (menu.g != menu.g_ant) {
+                fcn_graphbarrapje(15,11,menu.g);
+                menu.g_ant = menu.g;
+            }   
+
+            if (menu.b != menu.b_ant) {
+                fcn_graphbarrapje(15,21,menu.b);
+                menu.b_ant = menu.b;
+            }   
             //lcd.locate(20,0);
             //lcd.printf("%f",menu.r);
             //lcd.locate(20,11);
@@ -685,6 +718,10 @@ void menu_rgb_selg(enum Cmd_e cmd)
             //lcd.locate(20,21);
             //lcd.printf("%f",menu.b);
             lcd.copy_to_lcd(); // update lcd
+            r = menu.r;
+            g = menu.g;
+            b = menu.b;
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -705,18 +742,30 @@ void menu_rgb_selb(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            lcd.cls();
-            lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(0,0);
-            lcd.printf("R");
-            lcd.locate(0,11);
-            lcd.printf("G");
-            lcd.locate(0,21);
-            lcd.printf("B*");
+            if (menu.updatestatus != 3) {
+                lcd.rect(6,11,6,21,0);
+                lcd.rect(7,11,7,21,0);
+                lcd.rect(8,11,8,21,0);
+                lcd.rect(9,11,9,21,0);
+                lcd.locate(0,21);
+                lcd.printf("B*");
+                menu.updatestatus = 3;
+            }
 
-            fcn_graphbarrapje(10,0,menu.r);
-            fcn_graphbarrapje(10,11,menu.g);
-            fcn_graphbarrapje(10,21,menu.b);
+            if (menu.r != menu.r_ant) {
+                fcn_graphbarrapje(15,0,menu.r);
+                menu.r_ant = menu.r;
+            }   
+
+            if (menu.g != menu.g_ant) {
+                fcn_graphbarrapje(15,11,menu.g);
+                menu.g_ant = menu.g;
+            }   
+
+            if (menu.b != menu.b_ant) {
+                fcn_graphbarrapje(15,21,menu.b);
+                menu.b_ant = menu.b;
+            }   
 //            lcd.locate(20,0);
 //          lcd.printf("%f",menu.r);
 //            lcd.locate(20,11);
@@ -724,6 +773,9 @@ void menu_rgb_selb(enum Cmd_e cmd)
 //            lcd.locate(20,21);
 //            lcd.printf("%f",menu.b);
             lcd.copy_to_lcd(); // update lcd
+            r = menu.r;
+            g = menu.g;
+            b = menu.b;
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -736,6 +788,28 @@ void menu_rgb_selb(enum Cmd_e cmd)
     }
 };
 
+
+void menu_rgb_exit(enum Cmd_e cmd)
+{
+    if (cmd == CMD_INITIALIZE) {
+        menu.sm = MENUSM_INITIALIZE;
+    }
+    switch(menu.sm) {
+        case MENUSM_INITIALIZE: {
+            // inicializamos todo para que al proximo ingreso al menu de seleccion se actualice la pantalla
+            menu.r_ant = -menu.r;
+            menu.b_ant = -menu.b;
+            menu.g_ant = -menu.g;
+            menu.idx_tmp = MENU_SPEAKER_PPAL;
+            break;
+        }
+
+        case MENUSM_LOOP: {
+            break;
+        }
+
+    }
+};
 
 void menu_speaker_ppal(enum Cmd_e cmd)
 {
@@ -780,6 +854,7 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
             lcd.locate(74, 20);
             lcd.printf("  none   ");
             lcd.copy_to_lcd(); // update lcd
+            menu.bip = KEY_BIP1;
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -811,6 +886,7 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
             lcd.locate(74, 20);
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
+            menu.bip = KEY_BIP2;
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -842,6 +918,7 @@ void menu_speaker_selbip3(enum Cmd_e cmd)
             lcd.locate(74, 20);
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
+            menu.bip = KEY_BIP3;
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -873,6 +950,7 @@ void menu_speaker_selbipnone(enum Cmd_e cmd)
             lcd.locate(74, 20);
             lcd.printf("> none <");
             lcd.copy_to_lcd(); // update lcd
+            menu.bip = KEY_BIPNONE;
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1044,6 +1122,11 @@ void menu_rgb_gmenos(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            printf("G- %f\r\n",menu.g);
+            if (menu.g > CTE_RGBINCREMENT) {
+                menu.g -= CTE_RGBINCREMENT;
+            }
+            menu.idx_tmp = MENU_RGB_SELG;
 
             break;
         }
@@ -1063,6 +1146,11 @@ void menu_rgb_gmas(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            printf("g+ %f\r\n",menu.g);
+            if (menu.g < 1.0) {
+                menu.g += CTE_RGBINCREMENT;
+            }
+            menu.idx_tmp = MENU_RGB_SELG;
 
             break;
         }
@@ -1082,6 +1170,11 @@ void menu_rgb_bmenos(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            printf("B- %f\r\n",menu.b);
+            if (menu.b > CTE_RGBINCREMENT) {
+                menu.b -= CTE_RGBINCREMENT;
+            }
+            menu.idx_tmp = MENU_RGB_SELB;
 
             break;
         }
@@ -1101,6 +1194,11 @@ void menu_rgb_bmas(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            printf("B+ %f\r\n",menu.b);
+            if (menu.b < 1.0) {
+                menu.b += CTE_RGBINCREMENT;
+            }
+            menu.idx_tmp = MENU_RGB_SELB;
 
             break;
         }
@@ -1136,7 +1234,8 @@ void Task_Menu (void* pvParameters)
         {MENU_ACELEROMETRO_PPAL,MENU_SPEAKER_PPAL,MENU_NONE,MENU_NONE,MENU_RGB_SELR,menu_rgb_ppal},
         {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELG,menu_rgb_selr},
         {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELB,menu_rgb_selg},
-        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_SPEAKER_PPAL,menu_rgb_selb},
+        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_RGB_EXIT,menu_rgb_selb},
+        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_exit},
         {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_NONE,MENU_NONE,MENU_SPEAKER_SELBIP1,menu_speaker_ppal},
         {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip1},
         {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbip2},
@@ -1163,6 +1262,11 @@ void Task_Menu (void* pvParameters)
     menu.r = 0.50;
     menu.g = 0.50;
     menu.b = 0.50;
+    // para forzar un primer update 
+    menu.r_ant = 0.1;
+    menu.g_ant = 0.1;
+    menu.b_ant = 0.1;
+    menu.updatestatus = 0;
     r.period(0.001) ;
     g.period(0.001) ;
     b.period(0.001) ;
