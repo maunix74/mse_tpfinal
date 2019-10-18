@@ -400,13 +400,13 @@ void menu_temperatura_seltexto(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             lcd.cls();
-//            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.set_font((unsigned char*) Small_7);
             lcd.locate(0, 0);
             lcd.printf("Temperatura");
             lcd.locate(30, 10);
-            lcd.printf(">   Texto   <");
-            lcd.locate(30, 21);
-            lcd.printf("   Grafico   ");
+            lcd.printf("Texto <");
+            lcd.locate(30, 20);
+            lcd.printf("Grafico");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
             printf("Exit 1\r\n");
@@ -430,16 +430,14 @@ void menu_temperatura_selgrafico(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             lcd.cls();
-            lcd.set_font((unsigned char*) Arial12x12);
             lcd.locate(0, 0);
             lcd.printf("Temperatura");
-            lcd.locate(30, 11);
-            lcd.printf("    Texto    ");
-            lcd.locate(30, 22);
-            lcd.printf(">  Grafico  <");
+            lcd.locate(30, 10);
+            lcd.printf("Texto");
+            lcd.locate(30, 20);
+            lcd.printf("Grafico <");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
-
             break;
         }
 
@@ -522,13 +520,13 @@ void menu_acelerometro_seltexto(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             lcd.cls();
-            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.set_font((unsigned char*) Small_7);
             lcd.locate(0, 0);
             lcd.printf("Acelerometro");
-            lcd.locate(30, 11);
-            lcd.printf(">   Texto   <");
-            lcd.locate(30, 22);
-            lcd.printf("   Grafico   ");
+            lcd.locate(30, 10);
+            lcd.printf("Texto <");
+            lcd.locate(30, 20);
+            lcd.printf("Grafico");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
 
@@ -551,17 +549,14 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             lcd.cls();
-            lcd.set_font((unsigned char*) Arial12x12);
             lcd.locate(0, 0);
             lcd.printf("Acelerometro");
-            lcd.locate(30, 11);
-            lcd.printf("    Texto    ");
-            lcd.locate(30, 22);
-            lcd.printf(">  Grafico  <");
+            lcd.locate(30, 10);
+            lcd.printf("Texto");
+            lcd.locate(30, 20);
+            lcd.printf("Grafico <");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
-
-
             break;
         }
 
@@ -1029,7 +1024,16 @@ void menu_signals_selsquarewave(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            lcd.set_font((unsigned char*) Small_7);
+            lcd.locate(0, 0);
+            lcd.printf("Signals");
+            lcd.locate(30, 10);
+            lcd.printf("Cuadrada <");
+            lcd.locate(30, 20);
+            lcd.printf("Sinusoidal");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
@@ -1048,7 +1052,16 @@ void menu_signals_selsinewave(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            lcd.set_font((unsigned char*) Small_7);
+            lcd.locate(0, 0);
+            lcd.printf("Signals");
+            lcd.locate(30, 10);
+            lcd.printf("Cuadrada");
+            lcd.locate(30, 20);
+            lcd.printf("Sinusoidal <");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
@@ -1110,8 +1123,6 @@ void menu_rgb_rmenos(enum Cmd_e cmd)
                 menu.r -= CTE_RGBINCREMENT;
             }
             menu.idx_tmp = MENU_RGB_SELR;
-//            menu.idx = MENU_RGB_SELR;
-//            menu.sm = MENUSM_INITIALIZE;
             break;
         }
 
@@ -1135,8 +1146,6 @@ void menu_rgb_rmas(enum Cmd_e cmd)
                 menu.r += CTE_RGBINCREMENT;
             }
             menu.idx_tmp = MENU_RGB_SELR;
-            //menu.sm = MENUSM_INITIALIZE;
-
             break;
         }
 
@@ -1303,7 +1312,7 @@ void Task_Menu (void* pvParameters)
     r.period(0.001) ;
     g.period(0.001) ;
     b.period(0.001) ;
-    menu.bip = KEY_BIP1;
+    menu.bip = KEY_BIPNONE;
     menuitem = &menuitems[0];
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
