@@ -400,19 +400,21 @@ void menu_temperatura_seltexto(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             lcd.cls();
-            lcd.set_font((unsigned char*) Arial12x12);
+//            lcd.set_font((unsigned char*) Arial12x12);
             lcd.locate(0, 0);
             lcd.printf("Temperatura");
-            lcd.locate(30, 11);
-            lcd.printf(">  Texto  <");
-            lcd.locate(30, 22);
-            lcd.printf("  Grafico  ");
+            lcd.locate(30, 10);
+            lcd.printf(">   Texto   <");
+            lcd.locate(30, 21);
+            lcd.printf("   Grafico   ");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
+            printf("Exit 1\r\n");
             break;
         }
 
         case MENUSM_LOOP: {
+            printf("Seltexto Loop\r\n");
             break;
         }
 
@@ -427,6 +429,16 @@ void menu_temperatura_selgrafico(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            lcd.cls();
+            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.locate(0, 0);
+            lcd.printf("Temperatura");
+            lcd.locate(30, 11);
+            lcd.printf("    Texto    ");
+            lcd.locate(30, 22);
+            lcd.printf(">  Grafico  <");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
 
             break;
         }
@@ -509,6 +521,16 @@ void menu_acelerometro_seltexto(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            lcd.cls();
+            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.locate(0, 0);
+            lcd.printf("Acelerometro");
+            lcd.locate(30, 11);
+            lcd.printf(">   Texto   <");
+            lcd.locate(30, 22);
+            lcd.printf("   Grafico   ");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
 
             break;
         }
@@ -528,6 +550,17 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            lcd.cls();
+            lcd.set_font((unsigned char*) Arial12x12);
+            lcd.locate(0, 0);
+            lcd.printf("Acelerometro");
+            lcd.locate(30, 11);
+            lcd.printf("    Texto    ");
+            lcd.locate(30, 22);
+            lcd.printf(">  Grafico  <");
+            lcd.copy_to_lcd(); // update lcd
+            menu.sm = MENUSM_LOOP;
+
 
             break;
         }
@@ -1330,6 +1363,9 @@ void Task_Menu (void* pvParameters)
                 (*menuitem->func_ptr)(CMD_INITIALIZE);
 
             } else {
+        #ifdef DEBUGENABLE_TASKMENU
+        printf("Mismo Menu. ");
+        #endif
                 (*menuitem->func_ptr)(CMD_NONE);
             }
         }
@@ -1466,10 +1502,10 @@ int main (void)
     xKeysQueue = xQueueCreate (5,sizeof(uint8_t)) ;
     xBeeperQueue = xQueueCreate (1,sizeof(uint8_t)) ;
 
-    xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 256, NULL, 1, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1024, NULL, 2, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task4, ( const char * ) "Task4", 256, NULL, 2, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1536, NULL, 2, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task4, ( const char * ) "Task4", 128, NULL, 2, ( xTaskHandle * ) NULL );
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
