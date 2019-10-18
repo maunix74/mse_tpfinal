@@ -58,6 +58,8 @@ OBJECTS += main.o
 OBJECTS += C12832/C12832.o
 OBJECTS += C12832/GraphicsDisplay.o
 OBJECTS += C12832/TextDisplay.o
+OBJECTS += LM75B/LM75B.o
+
 
  SYS_OBJECTS += mbed/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/board.o
  SYS_OBJECTS += mbed/TARGET_LPC1768/TOOLCHAIN_GCC_ARM/cmsis_nvic.o
@@ -79,6 +81,7 @@ INCLUDE_PATHS += -I../mbed/TARGET_LPC1768
 INCLUDE_PATHS += -I../mbed/TARGET_LPC1768/TARGET_NXP/TARGET_LPC176X
 INCLUDE_PATHS += -I../mbed/TARGET_LPC1768/TARGET_NXP/TARGET_LPC176X/TARGET_MBED_LPC1768
 INCLUDE_PATHS += -I../C12832
+INCLUDE_PATHS += -I../LM75B
 
 LIBRARY_PATHS := -L../mbed/TARGET_LPC1768/TOOLCHAIN_GCC_ARM 
 LIBRARIES := -lmbed 
@@ -360,7 +363,8 @@ $(PROJECT).elf: $(OBJECTS) $(SYS_OBJECTS) $(PROJECT).link_script.ld
 $(PROJECT).bin: $(PROJECT).elf
 	$(ELF2BIN) -O binary $< $@
 	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ =====" 
-#	cp $@ /media/rsanchez/MBED
+	echo $@
+	#cp $@ /media/mgiovagnini/MBED/
 $(PROJECT).hex: $(PROJECT).elf
 	$(ELF2BIN) -O ihex $< $@
 

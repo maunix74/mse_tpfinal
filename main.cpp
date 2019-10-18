@@ -4,15 +4,17 @@
 #include "queue.h"
 #include "semphr.h"
 #include "C12832.h"
+#include "LM75B.h"
 
 //#include "debug_usb.h"
 
 
-#define DEBUGENABLE_TASKJOYSTICK
+//#define DEBUGENABLE_TASKJOYSTICK
 //#define DEBUGENABLE_TASKMENU
-#define DEBUGENABLE_TASKSCALE
 //#define DEBUGENABLE_TASKBEEPER
-
+#define DEBUGENABLE_TASKSCALE
+#define DEBUGENABLE_LOGTEMPQUEUEERRORS
+#define DEBUGENABLE_LOGTEMPQUEUELOGS
 
 
 DigitalOut led1(LED1);
@@ -22,6 +24,7 @@ DigitalOut led4(LED4);
 BusIn joy(p15,p12,p13,p16);
 DigitalIn fire(p14);
 C12832 lcd(p5,p7,p6,p8,p11);
+LM75B sensortemperatura(p28,p27);
 AnalogIn pot1(p19);
 AnalogIn pot2(p20);
 PwmOut spkr(p26);
@@ -35,6 +38,7 @@ PwmOut b(p25);
 #define CTE_XSTEPMAX 30.0
 #define CTE_YSCALEMIN 0.2
 #define CTE_YSCALEMAX 1.0
+#define CTE_CANTBIPSENMENUSLECCION  3
 
 static uint16_t task4loop=0;
 
@@ -154,6 +158,7 @@ Tmenu menu;
 QueueHandle_t xScaleQueue;
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
+QueueHandle_t xTemperatureQueue;
 
 
 //-------------------------------------------
@@ -483,16 +488,29 @@ void menu_temperatura_selgrafico(enum Cmd_e cmd)
 
 void menu_temperatura_printtexto(enum Cmd_e cmd)
 {
+    BaseType_t xQueueStatus;
+    float f;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
+
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            lcd.printf("Temperatura:");
+            lcd.copy_to_lcd();
             break;
         }
 
         case MENUSM_LOOP: {
+            xQueueStatus = xQueueReceive(xTemperatureQueue, &f, 5);
+            if (xQueueStatus == pdPASS) {
+                lcd.cls();
+                lcd.printf("Temperatura: %.1f",f);
+                lcd.copy_to_lcd();
+            }
+
             break;
         }
 
@@ -864,7 +882,7 @@ void menu_speaker_ppal(enum Cmd_e cmd)
         case MENUSM_INITIALIZE: {
             lcd.cls();
             lcd.set_font((unsigned char*) Arial12x12);
-            lcd.locate(34, 10);
+            lcd.locate(50, 10);
             lcd.printf("Speaker");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
@@ -883,6 +901,8 @@ void menu_speaker_ppal(enum Cmd_e cmd)
 void menu_speaker_selbip1(enum Cmd_e cmd)
 {
     BaseType_t xStatus;
+    static uint8_t sound;  // para que no suene todo el tiempo
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
@@ -890,13 +910,13 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
         case MENUSM_INITIALIZE: {
             lcd.cls();
             lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(34, 10);
+            lcd.locate(24, 10);
             lcd.printf("> bip1 < ");
-            lcd.locate(34, 20);
+            lcd.locate(24, 20);
             lcd.printf("  bip2   ");
-            lcd.locate(74, 10);
+            lcd.locate(64, 10);
             lcd.printf("  bip3   ");
-            lcd.locate(74, 20);
+            lcd.locate(64, 20);
             lcd.printf("  none   ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP1;
@@ -906,7 +926,12 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
-            xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+            if (sound >= CTE_CANTBIPSENMENUSLECCION) {
+                xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+                sound=0;
+            } else {
+                sound++;
+            }
             break;
         }
 
@@ -917,6 +942,8 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
 void menu_speaker_selbip2(enum Cmd_e cmd)
 {
     BaseType_t xStatus;
+    static uint8_t sound;  // para que no suene todo el tiempo
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
@@ -924,13 +951,13 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
         case MENUSM_INITIALIZE: {
             lcd.cls();
             lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(34, 10);
+            lcd.locate(24, 10);
             lcd.printf("  bip1  ");
-            lcd.locate(34, 20);
+            lcd.locate(24, 20);
             lcd.printf("> bip2 <");
-            lcd.locate(74, 10);
+            lcd.locate(64, 10);
             lcd.printf("  bip3  ");
-            lcd.locate(74, 20);
+            lcd.locate(64, 20);
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP2;
@@ -940,7 +967,12 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
-            xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+            if (sound >= CTE_CANTBIPSENMENUSLECCION) {
+                xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+                sound=0;
+            } else {
+                sound++;
+            }
             break;
         }
 
@@ -951,6 +983,8 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
 void menu_speaker_selbip3(enum Cmd_e cmd)
 {
     BaseType_t xStatus;
+    static uint8_t sound;  // para que no suene todo el tiempo
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
@@ -958,23 +992,29 @@ void menu_speaker_selbip3(enum Cmd_e cmd)
         case MENUSM_INITIALIZE: {
             lcd.cls();
             lcd.set_font((unsigned char*) Small_7);
-            lcd.locate(34, 10);
+            lcd.locate(24, 10);
             lcd.printf("  bip1   ");
-            lcd.locate(34, 20);
+            lcd.locate(24, 20);
             lcd.printf("  bip2   ");
-            lcd.locate(74, 10);
+            lcd.locate(64, 10);
             lcd.printf("> bip3 <");
-            lcd.locate(74, 20);
+            lcd.locate(64, 20);
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP3;
             menu.sm = MENUSM_LOOP;
+            sound=0;
 
             break;
         }
 
         case MENUSM_LOOP: {
-            xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+            if (sound >= CTE_CANTBIPSENMENUSLECCION) {
+                xStatus = xQueueSendToBack(xBeeperQueue, &menu.bip, 0);
+                sound=0;
+            } else {
+                sound++;
+            }
             break;
         }
 
@@ -1340,10 +1380,10 @@ void Task_Menu (void* pvParameters)
         {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_RGB_EXIT,menu_rgb_selb},
         {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_exit},
         {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_NONE,MENU_NONE,MENU_SPEAKER_SELBIP1,menu_speaker_ppal},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip1},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbip2},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP2,MENU_SPEAKER_SELBIPNONE,MENU_SIGNALS_PPAL,menu_speaker_selbip3},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP3,MENU_SPEAKER_SELBIP1,MENU_SIGNALS_PPAL,menu_speaker_selbipnone},
+        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP2,MENU_SPEAKER_SELBIPNONE,MENU_SIGNALS_PPAL,menu_speaker_selbip1},
+        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP3,MENU_SPEAKER_SELBIP1,MENU_SIGNALS_PPAL,menu_speaker_selbip2},
+        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip3},
+        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbipnone},
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_SIGNALS_SELSQUAREWAVE,menu_signals_ppal},
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_PRINTSQUAREWAVE,menu_signals_selsquarewave},
         {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave},
@@ -1523,7 +1563,6 @@ void Task_Beeper (void* pvParameters)
                 case KEY_BIP3: { spkr.period(4.0/2000); spkr=0.5;  break;}
             }
             }
-
         }
 
         vTaskDelay(100);
@@ -1537,6 +1576,7 @@ void Task_Scale (void* pvParameters)
 {
     BaseType_t xStatus;
     Tscale scale;
+    float f;
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
@@ -1555,6 +1595,20 @@ void Task_Scale (void* pvParameters)
             printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
 #endif
         }
+
+        if (sensortemperatura.open()) {
+        f = sensortemperatura.temp();
+        xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
+        if (xStatus != pdPASS) {
+#ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
+            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+#endif
+        } else {
+#ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
+            printf("<Temp=%.1f agregado a la cola.\r\n",f);
+#endif
+
+        }}
         
         vTaskDelay(1000);
     }
@@ -1563,15 +1617,12 @@ void Task_Scale (void* pvParameters)
 
 
 
-
-
-
-
 int main (void)
 {
-    xKeysQueue = xQueueCreate (5,sizeof(uint8_t)) ;
-    xBeeperQueue = xQueueCreate (1,sizeof(uint8_t)) ;
+    xKeysQueue = xQueueCreate (5,sizeof(uint8_t));
+    xBeeperQueue = xQueueCreate (1,sizeof(uint8_t));
     xScaleQueue = xQueueCreate(5, sizeof(Tscale));
+    xTemperatureQueue = xQueueCreate(1,sizeof(float));
 
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
