@@ -59,7 +59,6 @@ PwmOut b(p25);
 #define CTE_TEMPERATURAMINIMA  24 
 #define CTE_ALTODISPLAY        32
 
-static uint16_t task4loop=0;
 
 typedef enum  {
     KEY_NONE,
@@ -137,7 +136,6 @@ typedef struct Tmenuitem {
 };
 
 
-
 typedef struct {
     enum MenuSm_e sm;
     uint8_t idx;
@@ -163,12 +161,13 @@ typedef struct {
     } grafico;
 } Tmenu;
 
-
+/*
 struct {
     int x_loop;
     int y_result; 
     float y_temp;
 } grafico;
+*/
 
 typedef struct Tscale {
     float x_scale;
@@ -265,10 +264,6 @@ QueueHandle_t xAcelerometroQueue;
 TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
 TaskHandle_t TaskHandleAcelerometro;
-
-//SemaphoreHandle_t xSemaphoreTemperatura = NULL;
-//SemaphoreHandle_t xSemaphoreAcelerometro = NULL;
-//SemaphoreHandle_t xSemaphoreScale = NULL;
 
 
 
@@ -576,7 +571,6 @@ void menu_temperatura_selgrafico(enum Cmd_e cmd)
 void menu_temperatura_printtexto(enum Cmd_e cmd)
 {
     BaseType_t xQueueStatus;
-    static uint8_t ciclos;
     float f;
 
     if (cmd == CMD_INITIALIZE) {
@@ -594,8 +588,6 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
 
             vTaskResume(TaskHandleTemperature);
             menu.sm = MENUSM_LOOP;
-            //xSemaphoreGive(xSemaphoreTemperatura);
-            ciclos = 0;
             break;
         }
 
@@ -641,7 +633,6 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
             scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
-            //xSemaphoreGive(xSemaphoreTemperatura);
             vTaskResume(TaskHandleTemperature);
             #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Temperatura GRAFICO\r\n");
@@ -1468,6 +1459,10 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
 {
     Tscale scale;
     BaseType_t  xQueueStatus;
+    static float y;
+    static float y_ant;
+    //static int y_result_ant;
+    uint8_t loop;
 
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
@@ -1478,7 +1473,6 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
-            //xSemaphoreGive(xSemaphoreScale);
             vTaskResume(TaskHandleScale);
             #ifdef DEBUGENABLE_TASKMENU            
             printf("Menu Signals Print Square\r\n");
@@ -1497,13 +1491,20 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
                 menu.grafico.y_scale = CTE_YSCALEMIN + scale.y_scale*(CTE_YSCALEMAX - CTE_YSCALEMIN);
             }
 
-/*
+
             if (menu.grafico.idx_puntoactual < CTE_HISTORYSIZE) {
                 menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                if (menu.grafico.y_pos >= 0) menu.grafico.y_pos = 1.0; else menu.grafico.y_pos = -1.0;
                 y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
                 menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
                 menu.grafico.x_pos += menu.grafico.x_scale;
                 lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[menu.grafico.idx_puntoactual],1);
+
+                if (((menu.grafico.y_pos > 0) && (y_ant < 0)) ||
+                    ((menu.grafico.y_pos < 0) && (y_ant > 0))) {
+                    lcd.rect(menu.grafico.x_pos,menu.grafico.historia[menu.grafico.idx_puntoactual],menu.grafico.x_pos,menu.grafico.historia[menu.grafico.idx_puntoactual-1],1);
+                }
+                y_ant = menu.grafico.y_pos;
                 menu.grafico.idx_puntoactual++;
                 lcd.copy_to_lcd(); // update lcd
             } else {
@@ -1511,15 +1512,20 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
                 for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
                     menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
                     lcd.pixel(loop,menu.grafico.historia[loop],1);
+                    if (((menu.grafico.historia[loop+1] > 16) && (menu.grafico.historia[loop] < 16)) ||
+                        ((menu.grafico.historia[loop+1] < 16) && (menu.grafico.historia[loop] > 16))) {
+                         lcd.rect(loop,menu.grafico.historia[menu.grafico.idx_puntoactual],loop,menu.grafico.historia[menu.grafico.idx_puntoactual+1],1);                            
+                    }
                 }
                 menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                if (menu.grafico.y_pos >= 0) menu.grafico.y_pos = 1.0; else menu.grafico.y_pos = -1.0;
                 y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
                 menu.grafico.historia[CTE_HISTORYSIZE-1] = y;
                 menu.grafico.x_pos += menu.grafico.x_scale;
                 lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
                 lcd.copy_to_lcd(); // update lcd
             }
-*/
+
             break;
         }
 
@@ -1542,7 +1548,6 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
-            //xSemaphoreGive(xSemaphoreScale);
             vTaskResume(TaskHandleScale);
 
             #ifdef DEBUGENABLE_TASKMENU            
@@ -1766,7 +1771,10 @@ void Task_Menu (void* pvParameters)
     UBaseType_t queueelements;
 
     Tmenuitem * menuitem;
+    
+#ifndef DISABLE_USART
     uint8_t char_input;
+#endif
 
     menu.sm  = MENUSM_INITIALIZE;
     menu.idx = MENU_TEMPERATURA_PPAL;
@@ -1790,32 +1798,13 @@ void Task_Menu (void* pvParameters)
     menuitem = &menuitems[0];
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
+    key_ant = KEY_NONE;
    
     (void) pvParameters;                    // Just to stop compiler warnings.
     
     // Tomar semaforos para que las tareas no se bloqueen
 
-/*
-    while ( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) != pdTRUE ) {
-        vTaskDelay(100);
-    }
-    //#ifdef DEBUGENABLE_TASKMENU
-    printf("<Task Menu: Semaforo Scale Tomado>\r\n");
-    //#endif
-    while ( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) != pdTRUE ) {
-        vTaskDelay(100);
-    }
-    //#ifdef DEBUGENABLE_TASKMENU
-    printf("<Task Menu: Semaforo Temperatura Tomado>\r\n");
-    //#endif
 
-    while ( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) != pdTRUE ) {
-        vTaskDelay(100);
-    }
-    //#ifdef DEBUGENABLE_TASKMENU
-    printf("<Task Menu: Semaforo Acelerometro Tomado>\r\n");
-    //#endif
-*/
 
     for (;;) {
         led1= !led1;
@@ -1909,9 +1898,9 @@ void Task_Joystick (void* pvParameters)
 {
     int key_read;
     uint8_t key;
-    uint8_t key_ant;
+    //uint8_t key_ant;
     BaseType_t xStatus;
-    uint8_t bip;
+    //uint8_t bip;
 
     (void) pvParameters;
     for (;;) {
@@ -1939,7 +1928,7 @@ void Task_Joystick (void* pvParameters)
                 }
             }
 
-            key_ant = key;
+//            key_ant = key;
 //        }
         //printf("Task1\n");
         vTaskDelay(250);
@@ -1988,8 +1977,6 @@ void Task_Scale (void* pvParameters)
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
         led2= !led2;
-//        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
-        //printf("TaskScale\r\n");
 
         scale.x_scale = pot1.read();
         scale.y_scale = pot2.read();
@@ -2003,55 +1990,12 @@ void Task_Scale (void* pvParameters)
             printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
     #endif
         }
-//            xSemaphoreGive(xSemaphoreScale);
-//        }
         vTaskDelay(500);
     }
 }
 
 
 
-
-/*
-void Task_Temperatura (void* pvParameters)
-{
-    BaseType_t xStatus;
-    float f;
-
-    led4 = 0; 
-    (void) pvParameters;                    // Just to stop compiler warnings.
-    if (!sensortemperatura.open()) {
-        printf("Sensor Temperatura no presente\r\n");
-        vTaskSuspend(NULL);
-    }
-    for (;;) {
-        if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 50 ) == pdTRUE ) {
-            printf("<Semf.Temp Tomado>\r\n",f);
-            led4 = !led4;
-            f = sensortemperatura.temp();
-            xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
-            if (xStatus != pdPASS) {
-    #ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
-                printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
-    #endif
-            } else {
-    #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
-                printf("<Temp=%.1f grados leidos del sensor. Agregado a la cola.\r\n",f);
-    #endif
-            }
-            xSemaphoreGive( xSemaphoreTemperatura );
-
-        } else {
-            f = 0.01 * random();
-            xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
-    #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
-                printf("<Temp=%.2f agregado forzado a la cola.\r\n",f);
-    #endif
-        }
-        vTaskDelay(1000);
-    }
-}
-*/
 
 
 
@@ -2099,7 +2043,6 @@ void Task_Acelerometro (void* pvParameters)
 
     for (;;) {
         led4 = !led4;
-        //if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
         printf("Leer Acelerometro\r\n");
         accel.z = mma.z();
         accel.x = mma.x();
@@ -2116,8 +2059,7 @@ void Task_Acelerometro (void* pvParameters)
     #endif
         }
 
-        //    xSemaphoreGive( xSemaphoreAcelerometro );
-        //}
+
         vTaskDelay(500);
     }
 }
@@ -2132,9 +2074,6 @@ int main (void)
     xTemperatureQueue = xQueueCreate(1,sizeof(float));
     xAcelerometroQueue = xQueueCreate(3,sizeof(Acelerometro_t));
 
-    //xSemaphoreTemperatura = xSemaphoreCreateMutex();
-    //xSemaphoreAcelerometro = xSemaphoreCreateMutex();
-    //xSemaphoreScale = xSemaphoreCreateMutex();
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1532, NULL, 3, ( xTaskHandle * ) NULL);
