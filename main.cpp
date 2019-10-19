@@ -5,6 +5,7 @@
 #include "semphr.h"
 #include "C12832.h"
 #include "LM75B.h"
+#include "MMA7660.h"
 
 //#include "debug_usb.h"
 
@@ -39,6 +40,13 @@ PwmOut b(p25);
 #define CTE_YSCALEMIN 0.2
 #define CTE_YSCALEMAX 1.0
 #define CTE_CANTBIPSENMENUSLECCION  3
+
+#define CTE_XSTEPSQUAREMIN 5.0
+#define CTE_XSTEPSQUAREMAX 20.0
+
+#define CTE_TEMPERATURAMAXIMA  35
+#define CTE_TEMPERATURAMINIMA  20 
+#define CTE_ALTODISPLAY        32
 
 static uint16_t task4loop=0;
 
@@ -520,16 +528,50 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
 
 void menu_temperatura_printgrafico(enum Cmd_e cmd)
 {
+    BaseType_t xQueueStatus;
+    float f;
+    int y;
+    uint8_t loop;
+    static float scale_y;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            lcd.copy_to_lcd();   // update lcd
+            menu.grafico.historysize = 0;
+            menu.grafico.idx_puntoactual = 0;
+            menu.grafico.x_pos = 0.0;
+            menu.sm = MENUSM_LOOP;
+            scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
             break;
         }
 
         case MENUSM_LOOP: {
+            xQueueStatus = xQueueReceive(xTemperatureQueue, &f, 5);
+            if (xQueueStatus == pdPASS) {
+
+                if (menu.grafico.idx_puntoactual < CTE_HISTORYSIZE) {
+                    y = round(CTE_TEMPERATURAMAXIMA - scale_y*(f-CTE_TEMPERATURAMINIMA));
+                    menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
+                    lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[menu.grafico.idx_puntoactual],1);
+                    menu.grafico.idx_puntoactual++;
+                    lcd.copy_to_lcd(); // update lcd
+                } else {
+                    lcd.cls();
+                    for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
+                        menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
+                        lcd.pixel(loop,menu.grafico.historia[loop],1);
+                    }
+                    y = round(31 - (f-20));
+                    menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
+                    lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
+                    lcd.copy_to_lcd(); // update lcd
+                }
+            }
+
             break;
         }
 
@@ -1140,16 +1182,54 @@ void menu_signals_selsinewave(enum Cmd_e cmd)
 
 void menu_signals_printsquarewave(enum Cmd_e cmd)
 {
+    Tscale scale;
+    BaseType_t  xQueueStatus;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            lcd.cls();
+            menu.grafico.historysize = 0;
+            menu.grafico.idx_puntoactual = 0;
+            menu.grafico.x_pos = 0.0;
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
+
         case MENUSM_LOOP: {
+            xQueueStatus = xQueueReceive(xScaleQueue, &scale, 5);
+            if (xQueueStatus == pdPASS) {
+                // Update del scale x e y
+                menu.grafico.x_scale = CTE_XSTEPSQUAREMIN + scale.x_scale*(CTE_XSTEPSQUAREMAX-CTE_XSTEPSQUAREMIN);
+                menu.grafico.y_scale = CTE_YSCALEMIN + scale.y_scale*(CTE_YSCALEMAX - CTE_YSCALEMIN);
+            }
+
+/*
+            if (menu.grafico.idx_puntoactual < CTE_HISTORYSIZE) {
+                menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
+                menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
+                menu.grafico.x_pos += menu.grafico.x_scale;
+                lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[menu.grafico.idx_puntoactual],1);
+                menu.grafico.idx_puntoactual++;
+                lcd.copy_to_lcd(); // update lcd
+            } else {
+                lcd.cls();
+                for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
+                    menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
+                    lcd.pixel(loop,menu.grafico.historia[loop],1);
+                }
+                menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
+                menu.grafico.historia[CTE_HISTORYSIZE-1] = y;
+                menu.grafico.x_pos += menu.grafico.x_scale;
+                lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
+                lcd.copy_to_lcd(); // update lcd
+            }
+*/
             break;
         }
 
@@ -1576,12 +1656,10 @@ void Task_Scale (void* pvParameters)
 {
     BaseType_t xStatus;
     Tscale scale;
-    float f;
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
         led4= !led4;
-        //printf("Task4\n");
         
         scale.x_scale = pot1.read();
         scale.y_scale = pot2.read();
@@ -1595,6 +1673,22 @@ void Task_Scale (void* pvParameters)
             printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
 #endif
         }
+
+        vTaskDelay(1000);
+    }
+}
+
+
+
+
+
+void Task_Temperatura (void* pvParameters)
+{
+    BaseType_t xStatus;
+    float f;
+
+    (void) pvParameters;                    // Just to stop compiler warnings.
+    for (;;) {
 
         if (sensortemperatura.open()) {
         f = sensortemperatura.temp();
@@ -1628,6 +1722,7 @@ int main (void)
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1536, NULL, 2, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 256, NULL, 2, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 256, NULL, 2, ( xTaskHandle * ) NULL );
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
