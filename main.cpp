@@ -14,9 +14,15 @@
 //#define DEBUGENABLE_TASKMENU
 //#define DEBUGENABLE_TASKBEEPER
 //#define DEBUGENABLE_TASKSCALE
-#define DEBUGENABLE_LOGTEMPERATUREPRINT
+//#define DEBUGENABLE_LOGTEMPERATUREPRINT
 //#define DEBUGENABLE_LOGTEMPQUEUEERRORS
-#define DEBUGENABLE_LOGTEMPQUEUELOGS
+//#define DEBUGENABLE_LOGTEMPQUEUELOGS
+
+
+// creo que hay bugs en las librerias al acceder a perifericos se cuelgan y no resumen las tareas
+#define DISABLE_LOGICARTOSACELEROMETRO
+#define DISABLE_LOGICARTOSTEMPERATURA
+//#define DISABLE_LOGICARTOSSCALE
 
 
 DigitalOut led1(LED1);
@@ -172,6 +178,7 @@ QueueHandle_t xTemperatureQueue;
 
 TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
+TaskHandle_t TaskHandleMenu;
 
 SemaphoreHandle_t xSemaphoreTemperatura = NULL;
 SemaphoreHandle_t xSemaphoreAcelerometro = NULL;
@@ -520,8 +527,9 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
             #ifdef DEBUGENABLE_LOGTEMPERATUREPRINT
             printf("Temperatura. Modo Texto. Inicio.\r\n",f);
             #endif
-            vTaskResume(&TaskHandleTemperature);
+            //vTaskResume(&TaskHandleTemperature);
             menu.sm = MENUSM_LOOP;
+            xSemaphoreGive(xSemaphoreTemperatura);
             ciclos = 0;
             break;
         }
@@ -541,7 +549,7 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
                 lcd.copy_to_lcd();
             }
 
-      
+             /*
             ciclos++;
             if (ciclos > 20) {
                 vTaskResume(&TaskHandleTemperature);
@@ -550,6 +558,7 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
                 #endif
                 ciclos = 0;
             }
+            */
 
             break;
         }
@@ -578,7 +587,7 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
             menu.grafico.x_pos = 0.0;
             menu.sm = MENUSM_LOOP;
             scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
-            vTaskResume(&TaskHandleTemperature);
+            xSemaphoreGive(xSemaphoreTemperatura);
 
             break;
         }
@@ -620,12 +629,17 @@ void menu_temperatura_exit(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            menu.idx_tmp = MENU_ACELEROMETRO_PPAL;
-            vTaskSuspend(&TaskHandleTemperature);
+            //printf("temperatura exit\r\n");
+            if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE )
+            {
+                menu.sm = MENUSM_LOOP;
+                printf("Semaforo temperatura tomado\r\n");
+            }
             break;
         }
 
         case MENUSM_LOOP: {
+            menu.idx_tmp = MENU_ACELEROMETRO_PPAL;
             break;
         }
 
@@ -1249,6 +1263,7 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
             menu.sm = MENUSM_LOOP;
+            xSemaphoreGive(xSemaphoreScale);
             break;
         }
 
@@ -1306,6 +1321,8 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
+            xSemaphoreGive(xSemaphoreScale);
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -1501,8 +1518,8 @@ void Task_Menu (void* pvParameters)
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto},
         {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_PRINTGRAFICO,menu_temperatura_selgrafico},
-        {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printtexto},
-        {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printgrafico},
+        {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printtexto},
+        {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printgrafico},
         {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_exit},
         {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_ACELEROMETRO_SELTEXTO,menu_acelerometro_ppal},
         {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_PRINTTEXTO,menu_acelerometro_seltexto},
@@ -1556,9 +1573,30 @@ void Task_Menu (void* pvParameters)
     menuitem = &menuitems[0];
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
-    
-          
+   
     (void) pvParameters;                    // Just to stop compiler warnings.
+    
+    // Tomar semaforos para que las tareas no se bloqueen
+
+    while ( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) != pdTRUE ) {
+        vTaskDelay(100);
+    }
+    //#ifdef DEBUGENABLE_TASKMENU
+    printf("<Task Menu: Semaforo Scale Tomado>\r\n");
+    //#endif
+    while ( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) != pdTRUE ) {
+        vTaskDelay(100);
+    }
+    //#ifdef DEBUGENABLE_TASKMENU
+    printf("<Task Menu: Semaforo Temperatura Tomado>\r\n");
+    //#endif
+
+    while ( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) != pdTRUE ) {
+        vTaskDelay(100);
+    }
+    //#ifdef DEBUGENABLE_TASKMENU
+    printf("<Task Menu: Semaforo Acelerometro Tomado>\r\n");
+    //#endif
 
 
     for (;;) {
@@ -1714,22 +1752,24 @@ void Task_Scale (void* pvParameters)
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
-        //led4 = !led4;
+        led4 = !led4;
         
-        scale.x_scale = pot1.read();
-        scale.y_scale = pot2.read();
-        xStatus = xQueueSendToBack(xScaleQueue, &scale, 0);
-        if (xStatus != pdPASS) {
-#ifdef DEBUGENABLE_TASKSCALE
-            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
-#endif
-        } else {
-#ifdef DEBUGENABLE_TASKSCALE
-            printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
-#endif
-        }
-
-        vTaskDelay(500);
+//        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
+            scale.x_scale = pot1.read();
+            scale.y_scale = pot2.read();
+            xStatus = xQueueSendToBack(xScaleQueue, &scale, 0);
+            if (xStatus != pdPASS) {
+    #ifdef DEBUGENABLE_TASKSCALE
+                printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+    #endif
+            } else {
+    #ifdef DEBUGENABLE_TASKSCALE
+                printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
+    #endif
+            }
+//            xSemaphoreGive(xSemaphoreScale);
+//        }
+        vTaskDelay(1000);
     }
 }
 
@@ -1745,7 +1785,8 @@ void Task_Temperatura (void* pvParameters)
     led4 = 0; 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
-        printf("Tarea temperatura resumida\r\n",f);
+        if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) == pdTRUE ) {
+        //printf("Tarea temperatura resumida\r\n",f);
         led4 = !led4;
         if (sensortemperatura.open()) {
             f = sensortemperatura.temp();
@@ -1767,14 +1808,29 @@ void Task_Temperatura (void* pvParameters)
                 printf("<Temp=%.2f agregado forzado a la cola.\r\n",f);
     #endif
         }
-        
-        printf("Tarea temperatura suspendida\r\n",f);
-        //vTaskSuspend(NULL);
-        printf("Tarea Temperatura. Reanuda\r\n",f);
+        xSemaphoreGive( xSemaphoreTemperatura );
+
+        }
         vTaskDelay(500);
     }
 }
 
+
+void Task_Acelerometro (void* pvParameters)
+{
+    BaseType_t xStatus;
+    float f;
+
+    led4 = 0; 
+    (void) pvParameters;                    // Just to stop compiler warnings.
+    for (;;) {
+        if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
+            printf("Leer Acelerometro\r\n",f);
+            xSemaphoreGive( xSemaphoreTemperatura );
+        }
+         vTaskDelay(500);
+    }
+}
 
 
 
@@ -1790,9 +1846,16 @@ int main (void)
     xSemaphoreScale = xSemaphoreCreateMutex();
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 2048, NULL, 3, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 192, NULL, 2, &TaskHandleScale);
-    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 1024, NULL, 2, &TaskHandleTemperature);
+    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 2048, NULL, 3, &TaskHandleMenu);
+    #ifndef DISABLE_LOGICARTOSSCALE
+    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 256, NULL, 2, &TaskHandleScale);
+    #endif
+    #ifndef DISABLE_LOGICARTOSTEMPERATURA
+    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 512, NULL, 2, &TaskHandleTemperature);
+    #endif
+    #ifndef DISABLE_LOGICARTOSACELEROMETRO
+    xTaskCreate( Task_Acelerometro, ( const char * ) "Task Acelerometro", 512, NULL, 2, NULL);
+    #endif
     //vTaskSuspend(&TaskHandleScale);
     //vTaskSuspend(&TaskHandleTemperature);
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
