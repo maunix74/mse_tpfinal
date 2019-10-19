@@ -21,8 +21,8 @@
 
 // creo que hay bugs en las librerias al acceder a perifericos se cuelgan y no resumen las tareas
 #define DISABLE_LOGICARTOSACELEROMETRO
-#define DISABLE_LOGICARTOSTEMPERATURA
-//#define DISABLE_LOGICARTOSSCALE
+//#define DISABLE_LOGICARTOSTEMPERATURA
+#define DISABLE_LOGICARTOSSCALE
 
 
 DigitalOut led1(LED1);
@@ -630,7 +630,7 @@ void menu_temperatura_exit(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             //printf("temperatura exit\r\n");
-            if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE )
+            if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) == pdTRUE )
             {
                 menu.sm = MENUSM_LOOP;
                 printf("Semaforo temperatura tomado\r\n");
@@ -1719,7 +1719,6 @@ void Task_Beeper (void* pvParameters)
     uint8_t beeper; 
     (void) pvParameters;
     for (;;) {
-        led2= !led2;
         queueelements = uxQueueMessagesWaiting(xBeeperQueue);
         //#if defined(DEBUGENABLE_TASKBEEPER)
         //printf("Beeper qe: %d\r\n",queueelements);
@@ -1752,9 +1751,10 @@ void Task_Scale (void* pvParameters)
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
-        led4 = !led4;
-        
-//        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
+        led2= !led2;
+        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
+            printf("SemScale\r\n");
+            led4 = !led4;
             scale.x_scale = pot1.read();
             scale.y_scale = pot2.read();
             xStatus = xQueueSendToBack(xScaleQueue, &scale, 0);
@@ -1767,8 +1767,8 @@ void Task_Scale (void* pvParameters)
                 printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
     #endif
             }
-//            xSemaphoreGive(xSemaphoreScale);
-//        }
+            xSemaphoreGive(xSemaphoreScale);
+        }
         vTaskDelay(1000);
     }
 }
@@ -1784,11 +1784,14 @@ void Task_Temperatura (void* pvParameters)
 
     led4 = 0; 
     (void) pvParameters;                    // Just to stop compiler warnings.
+    if (!sensortemperatura.open()) {
+        printf("Sensor Temperatura no presente\r\n");
+        vTaskSuspend(NULL);
+    }
     for (;;) {
-        if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) == pdTRUE ) {
-        //printf("Tarea temperatura resumida\r\n",f);
-        led4 = !led4;
-        if (sensortemperatura.open()) {
+        if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 50 ) == pdTRUE ) {
+            printf("<Semf.Temp Tomado>\r\n",f);
+            led4 = !led4;
             f = sensortemperatura.temp();
             xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
             if (xStatus != pdPASS) {
@@ -1799,8 +1802,9 @@ void Task_Temperatura (void* pvParameters)
     #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
                 printf("<Temp=%.1f grados leidos del sensor. Agregado a la cola.\r\n",f);
     #endif
-
             }
+            xSemaphoreGive( xSemaphoreTemperatura );
+
         } else {
             f = 0.01 * random();
             xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
@@ -1808,10 +1812,7 @@ void Task_Temperatura (void* pvParameters)
                 printf("<Temp=%.2f agregado forzado a la cola.\r\n",f);
     #endif
         }
-        xSemaphoreGive( xSemaphoreTemperatura );
-
-        }
-        vTaskDelay(500);
+        vTaskDelay(1000);
     }
 }
 
@@ -1826,7 +1827,7 @@ void Task_Acelerometro (void* pvParameters)
     for (;;) {
         if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
             printf("Leer Acelerometro\r\n",f);
-            xSemaphoreGive( xSemaphoreTemperatura );
+            xSemaphoreGive( xSemaphoreAcelerometro );
         }
          vTaskDelay(500);
     }
@@ -1846,12 +1847,12 @@ int main (void)
     xSemaphoreScale = xSemaphoreCreateMutex();
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 2048, NULL, 3, &TaskHandleMenu);
+    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1532, NULL, 3, &TaskHandleMenu);
     #ifndef DISABLE_LOGICARTOSSCALE
-    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 256, NULL, 2, &TaskHandleScale);
+    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 128, NULL, 2, &TaskHandleScale);
     #endif
     #ifndef DISABLE_LOGICARTOSTEMPERATURA
-    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 512, NULL, 2, &TaskHandleTemperature);
+    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 1024, NULL, 2, &TaskHandleTemperature);
     #endif
     #ifndef DISABLE_LOGICARTOSACELEROMETRO
     xTaskCreate( Task_Acelerometro, ( const char * ) "Task Acelerometro", 512, NULL, 2, NULL);
