@@ -33,6 +33,7 @@ BusIn joy(p15,p12,p13,p16);
 DigitalIn fire(p14);
 C12832 lcd(p5,p7,p6,p8,p11);
 LM75B sensortemperatura(p28,p27);
+MMA7660 mma(p28,p27);
 AnalogIn pot1(p19);
 AnalogIn pot2(p20);
 PwmOut spkr(p26);
@@ -100,6 +101,7 @@ typedef enum  {
     MENU_SIGNALS_SELSINEWAVE,
     MENU_SIGNALS_PRINTSQUAREWAVE,
     MENU_SIGNALS_PRINTSINEWAVE,
+    MENU_SIGNALS_EXIT,
     MENU_RGB_RMENOS,
     MENU_RGB_RMAS,
     MENU_RGB_GMENOS,
@@ -200,6 +202,7 @@ void menu_signals_selsquarewave(enum Cmd_e cmd);
 void menu_signals_selsinewave(enum Cmd_e cmd);
 void menu_signals_printsquarewave(enum Cmd_e cmd);
 void menu_signals_printsinewave(enum Cmd_e cmd);
+void menu_signals_exit(enum Cmd_e cmd);
 void menu_rgb_rmenos(enum Cmd_e cmd);
 void menu_rgb_rmas(enum Cmd_e cmd);
 void menu_rgb_gmenos(enum Cmd_e cmd);
@@ -232,8 +235,9 @@ Tmenuitem menuitems[] = {
     {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_SIGNALS_SELSQUAREWAVE,menu_signals_ppal},
     {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_PRINTSQUAREWAVE,menu_signals_selsquarewave},
     {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave},
-    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave},
-    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave},
+    {MENU_SIGNALS_EXIT,MENU_SIGNALS_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave},
+    {MENU_SIGNALS_EXIT,MENU_SIGNALS_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave},
+    {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_exit},
     {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos},
     {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas},
     {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos},
@@ -242,11 +246,15 @@ Tmenuitem menuitems[] = {
     {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas}
 };
 
+typedef struct {
+    float x, y, z;
+} Acelerometro_t;
 
 QueueHandle_t xScaleQueue;
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
 QueueHandle_t xTemperatureQueue;
+QueueHandle_t xAcelerometroQueue;
 
 TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
@@ -1303,7 +1311,8 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
             menu.sm = MENUSM_LOOP;
-            xSemaphoreGive(xSemaphoreScale);
+            //xSemaphoreGive(xSemaphoreScale);
+            vTaskResume(TaskHandleScale);
             break;
         }
 
@@ -1361,7 +1370,8 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
-            xSemaphoreGive(xSemaphoreScale);
+            //xSemaphoreGive(xSemaphoreScale);
+            vTaskResume(TaskHandleScale);
 
             menu.sm = MENUSM_LOOP;
             break;
@@ -1396,6 +1406,26 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
                 lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
                 lcd.copy_to_lcd(); // update lcd
             }
+            break;
+        }
+
+    }
+};
+
+
+void menu_signals_exit(enum Cmd_e cmd)
+{
+    if (cmd == CMD_INITIALIZE) {
+        menu.sm = MENUSM_INITIALIZE;
+    }
+    switch(menu.sm) {
+        case MENUSM_INITIALIZE: {
+            vTaskSuspend(TaskHandleScale);
+            menu.idx_tmp = MENU_RGB_SELR;
+            break;
+        }
+
+        case MENUSM_LOOP: {
             break;
         }
 
@@ -1642,9 +1672,7 @@ void Task_Menu (void* pvParameters)
             case '3': {vTaskResume(TaskHandleAcelerometro); break;}
             case '4': {vTaskSuspend(TaskHandleTemperature); break;}
             case '5': {vTaskSuspend(TaskHandleScale); break;}
-            case '6f': {vTaskSuspend(TaskHandleAcelerometro); break;}
-
-
+            case '6': {vTaskSuspend(TaskHandleAcelerometro); break;}
             }
         }
 //        */
@@ -1778,23 +1806,23 @@ void Task_Scale (void* pvParameters)
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
         led2= !led2;
-        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
-            printf("SemScale\r\n");
-            led4 = !led4;
-            scale.x_scale = pot1.read();
-            scale.y_scale = pot2.read();
-            xStatus = xQueueSendToBack(xScaleQueue, &scale, 0);
-            if (xStatus != pdPASS) {
+//        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
+        printf("TaskScale\r\n");
+
+        scale.x_scale = pot1.read();
+        scale.y_scale = pot2.read();
+        xStatus = xQueueSendToBack(xScaleQueue, &scale, 0);
+        if (xStatus != pdPASS) {
     #ifdef DEBUGENABLE_TASKSCALE
-                printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
     #endif
-            } else {
+        } else {
     #ifdef DEBUGENABLE_TASKSCALE
-                printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
+            printf("<xScaleQueue. Scale X,Y: %f,%f>\r\n",scale.x_scale, scale.y_scale);
     #endif
-            }
-            xSemaphoreGive(xSemaphoreScale);
         }
+//            xSemaphoreGive(xSemaphoreScale);
+//        }
         vTaskDelay(500);
     }
 }
@@ -1878,17 +1906,40 @@ void Task_Temperatura (void* pvParameters)
 void Task_Acelerometro (void* pvParameters)
 {
     BaseType_t xStatus;
-    float f;
+    Acelerometro_t accel;
 
     led4 = 0; 
+    while(1) {
+       if (!mma.testConnection()) {
+           vTaskSuspend(NULL);
+           printf("MMA7669 no detectado.\r\n");
+       }
+    }
+  
     (void) pvParameters;                    // Just to stop compiler warnings.
+
     for (;;) {
         led4 = !led4;
-        if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
-            printf("Leer Acelerometro\r\n",f);
-            xSemaphoreGive( xSemaphoreAcelerometro );
+        //if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
+        printf("Leer Acelerometro\r\n");
+        accel.z = mma.z();
+        accel.x = mma.x();
+        accel.y = mma.y();
+        
+        xStatus = xQueueSendToBack(xAcelerometroQueue, &accel,0);
+        if (xStatus != pdPASS) {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
+            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+    #endif
+        } else {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
+                printf("<Temp=%.1f grados leidos del sensor. Agregado a la cola.\r\n",f);
+    #endif
         }
-         vTaskDelay(500);
+
+        //    xSemaphoreGive( xSemaphoreAcelerometro );
+        //}
+        vTaskDelay(500);
     }
 }
 
@@ -1900,6 +1951,7 @@ int main (void)
     xBeeperQueue = xQueueCreate (1,sizeof(uint8_t));
     xScaleQueue = xQueueCreate(5, sizeof(Tscale));
     xTemperatureQueue = xQueueCreate(1,sizeof(float));
+    xAcelerometroQueue = xQueueCreate(3,sizeof(Acelerometro_t));
 
     xSemaphoreTemperatura = xSemaphoreCreateMutex();
     xSemaphoreAcelerometro = xSemaphoreCreateMutex();
