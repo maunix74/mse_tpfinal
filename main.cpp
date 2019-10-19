@@ -19,6 +19,7 @@
 //#define DEBUGENABLE_LOGTEMPERATUREPRINT
 //#define DEBUGENABLE_LOGTEMPQUEUEERRORS
 //#define DEBUGENABLE_LOGTEMPQUEUELOGS
+#define DEBUGENABLE_TASKSTARTED
 
 
 // creo que hay bugs en las librerias al acceder a perifericos se cuelgan y no resumen las tareas
@@ -54,8 +55,8 @@ PwmOut b(p25);
 #define CTE_XSTEPSQUAREMIN 5.0
 #define CTE_XSTEPSQUAREMAX 20.0
 
-#define CTE_TEMPERATURAMAXIMA  35
-#define CTE_TEMPERATURAMINIMA  20 
+#define CTE_TEMPERATURAMAXIMA  33
+#define CTE_TEMPERATURAMINIMA  24 
 #define CTE_ALTODISPLAY        32
 
 static uint16_t task4loop=0;
@@ -265,9 +266,9 @@ TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
 TaskHandle_t TaskHandleAcelerometro;
 
-SemaphoreHandle_t xSemaphoreTemperatura = NULL;
-SemaphoreHandle_t xSemaphoreAcelerometro = NULL;
-SemaphoreHandle_t xSemaphoreScale = NULL;
+//SemaphoreHandle_t xSemaphoreTemperatura = NULL;
+//SemaphoreHandle_t xSemaphoreAcelerometro = NULL;
+//SemaphoreHandle_t xSemaphoreScale = NULL;
 
 
 
@@ -665,7 +666,7 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
                         menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
                         lcd.pixel(loop,menu.grafico.historia[loop],1);
                     }
-                    y = round(31 - (f-20));
+                    y = round(CTE_TEMPERATURAMAXIMA - scale_y*(f-CTE_TEMPERATURAMINIMA));
                     menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
                     lcd.pixel(menu.grafico.idx_puntoactual, menu.grafico.historia[CTE_HISTORYSIZE-1],1);
                     lcd.copy_to_lcd(); // update lcd
@@ -801,6 +802,9 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
 
 void menu_acelerometro_printtexto(enum Cmd_e cmd)
 {
+    BaseType_t xQueueStatus;
+    Acelerometro_t accel_read;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
@@ -809,11 +813,24 @@ void menu_acelerometro_printtexto(enum Cmd_e cmd)
             #ifdef DEBUGENABLE_TASKMENU            
             printf("Menu Acelerometro Print Texto\r\n");
             #endif
+            vTaskResume(TaskHandleAcelerometro);
             menu.sm = MENUSM_LOOP;
             break;
         }
 
         case MENUSM_LOOP: {
+            xQueueStatus = xQueueReceive(xAcelerometroQueue, &accel_read, 5);
+            if (xQueueStatus == pdPASS) {
+                lcd.cls();
+                lcd.locate(0,0);
+                lcd.printf("Acelerometro X: %.1f",accel_read.x);
+                lcd.locate(0,10);
+                lcd.printf("Acelerometro Y: %.1f",accel_read.y);
+                lcd.locate(0,20);
+                lcd.printf("Acelerometro Z: %.1f",accel_read.z);
+                lcd.copy_to_lcd();
+            }
+
             break;
         }
 
@@ -823,6 +840,11 @@ void menu_acelerometro_printtexto(enum Cmd_e cmd)
 
 void menu_acelerometro_printgrafico(enum Cmd_e cmd)
 {
+    BaseType_t xQueueStatus;
+    Acelerometro_t accel_read;
+    uint8_t delta_axis;
+    uint8_t loop;
+
     if (cmd == CMD_INITIALIZE) {
         menu.sm = MENUSM_INITIALIZE;
     }
@@ -831,12 +853,62 @@ void menu_acelerometro_printgrafico(enum Cmd_e cmd)
             #ifdef DEBUGENABLE_TASKMENU            
             printf("Menu Acelerometro Print Grafico\r\n");
             #endif
+            vTaskResume(TaskHandleAcelerometro);
             menu.sm = MENUSM_LOOP;
-
             break;
         }
 
         case MENUSM_LOOP: {
+            xQueueStatus = xQueueReceive(xAcelerometroQueue, &accel_read, 5);
+            if (xQueueStatus == pdPASS) {
+                lcd.cls();
+                lcd.locate(55,0);
+                lcd.printf(":X:");
+                lcd.locate(55,10);
+                lcd.printf(":Y:");
+                lcd.locate(55,20);
+                lcd.printf(":Z:");
+                if (accel_read.x > 0) {
+                    delta_axis = accel_read.x / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(70+loop,0,70+loop,10,1);
+                    }
+                } else {
+                    delta_axis = -accel_read.x / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(50-loop,0,50-loop,10,1);
+                    }
+                }
+
+                if (accel_read.y > 0) {
+                    delta_axis = accel_read.y / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(70+loop,11,70+loop,20,1);
+                    }
+                } else {
+                    delta_axis = -accel_read.y / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(50-loop,11,50-loop,20,1);
+                    }
+                }
+
+
+                if (accel_read.z > 0) {
+                    delta_axis = accel_read.z / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(70+loop,21,70+loop,30,1);
+                    }
+                } else {
+                    delta_axis = -accel_read.z / 0.03;
+                    for(loop=0;loop<delta_axis;loop++) {
+                        lcd.line(50-loop,21,50-loop,30,1);
+                    }
+                }
+
+
+                lcd.copy_to_lcd();
+            }
+
             break;
         }
 
@@ -1917,7 +1989,7 @@ void Task_Scale (void* pvParameters)
     for (;;) {
         led2= !led2;
 //        if( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) == pdTRUE ) {
-        printf("TaskScale\r\n");
+        //printf("TaskScale\r\n");
 
         scale.x_scale = pot1.read();
         scale.y_scale = pot2.read();
@@ -1980,7 +2052,6 @@ void Task_Temperatura (void* pvParameters)
     }
 }
 */
-
 
 
 
@@ -2061,9 +2132,9 @@ int main (void)
     xTemperatureQueue = xQueueCreate(1,sizeof(float));
     xAcelerometroQueue = xQueueCreate(3,sizeof(Acelerometro_t));
 
-    xSemaphoreTemperatura = xSemaphoreCreateMutex();
-    xSemaphoreAcelerometro = xSemaphoreCreateMutex();
-    xSemaphoreScale = xSemaphoreCreateMutex();
+    //xSemaphoreTemperatura = xSemaphoreCreateMutex();
+    //xSemaphoreAcelerometro = xSemaphoreCreateMutex();
+    //xSemaphoreScale = xSemaphoreCreateMutex();
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1532, NULL, 3, ( xTaskHandle * ) NULL);
@@ -2079,7 +2150,8 @@ int main (void)
     vTaskSuspend(TaskHandleScale);
     vTaskSuspend(TaskHandleTemperature);
     vTaskSuspend(TaskHandleAcelerometro);
-    printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
+    printf("\r\n\r\n\r\n\r\n\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
+    printf("--------------------------------------------------------------------\r\n\r\n\r\n");
 
     vTaskStartScheduler();
     //should never get here
