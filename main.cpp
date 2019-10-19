@@ -10,6 +10,7 @@
 //#include "debug_usb.h"
 
 
+#define DISABLE_USART
 //#define DEBUGENABLE_TASKJOYSTICK
 #define DEBUGENABLE_TASKMENU
 //#define DEBUGENABLE_TASKMENUSM
@@ -1768,6 +1769,7 @@ void Task_Menu (void* pvParameters)
             }
         }
 
+#ifndef DISABLE_USART
         scanf(" %c", &char_input);
         //if (char_input = getchar()); {
         //    led2 != led2;
@@ -1784,7 +1786,7 @@ void Task_Menu (void* pvParameters)
             }
         }
 //        */
-
+#endif
 
         if (key != key_ant) {
             switch(key) {
