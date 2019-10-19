@@ -72,6 +72,7 @@ typedef enum  {
     MENU_TEMPERATURA_SELGRAFICO,
     MENU_TEMPERATURA_PRINTTEXTO,
     MENU_TEMPERATURA_PRINTGRAFICO,
+    MENU_TEMPERATURA_EXIT,
     MENU_ACELEROMETRO_PPAL,
     MENU_ACELEROMETRO_SELTEXTO,
     MENU_ACELEROMETRO_SELGRAFICO,
@@ -167,6 +168,9 @@ QueueHandle_t xScaleQueue;
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
 QueueHandle_t xTemperatureQueue;
+
+TaskHandle_t TaskHandleScale;
+TaskHandle_t TaskHandleTemperature;
 
 
 //-------------------------------------------
@@ -384,6 +388,7 @@ void menu_temperatura_seltexto(enum Cmd_e cmd);
 void menu_temperatura_selgrafico(enum Cmd_e cmd);
 void menu_temperatura_printtexto(enum Cmd_e cmd);
 void menu_temperatura_printgrafico(enum Cmd_e cmd);
+void menu_temperatura_exit(enum Cmd_e cmd);
 void menu_acelerometro_ppal(enum Cmd_e cmd);
 void menu_acelerometro_seltexto(enum Cmd_e cmd);
 void menu_acelerometro_selgrafico(enum Cmd_e cmd);
@@ -508,6 +513,7 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
             lcd.cls();
             lcd.printf("Temperatura:");
             lcd.copy_to_lcd();
+            vTaskResume(&TaskHandleTemperature);
             break;
         }
 
@@ -546,6 +552,8 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
             menu.grafico.x_pos = 0.0;
             menu.sm = MENUSM_LOOP;
             scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
+            vTaskResume(&TaskHandleTemperature);
+
             break;
         }
 
@@ -572,6 +580,26 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
                 }
             }
 
+            break;
+        }
+
+    }
+};
+
+
+void menu_temperatura_exit(enum Cmd_e cmd)
+{
+    if (cmd == CMD_INITIALIZE) {
+        menu.sm = MENUSM_INITIALIZE;
+    }
+    switch(menu.sm) {
+        case MENUSM_INITIALIZE: {
+            menu.idx_tmp = MENU_ACELEROMETRO_PPAL;
+            vTaskSuspend(&TaskHandleTemperature);
+            break;
+        }
+
+        case MENUSM_LOOP: {
             break;
         }
 
@@ -1659,7 +1687,7 @@ void Task_Scale (void* pvParameters)
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
-        led4= !led4;
+        led4 = !led4;
         
         scale.x_scale = pot1.read();
         scale.y_scale = pot2.read();
@@ -1674,7 +1702,7 @@ void Task_Scale (void* pvParameters)
 #endif
         }
 
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
 }
 
@@ -1689,25 +1717,25 @@ void Task_Temperatura (void* pvParameters)
 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
-
+        led4 = !led4;
         if (sensortemperatura.open()) {
-        f = sensortemperatura.temp();
-        xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
-        if (xStatus != pdPASS) {
-#ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
-            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
-#endif
-        } else {
-#ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
-            printf("<Temp=%.1f agregado a la cola.\r\n",f);
-#endif
+            f = sensortemperatura.temp();
+            xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
+            if (xStatus != pdPASS) {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
+                printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+    #endif
+            } else {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
+                printf("<Temp=%.1f agregado a la cola.\r\n",f);
+    #endif
 
-        }}
+            }
+        }
         
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
 }
-
 
 
 
@@ -1721,8 +1749,10 @@ int main (void)
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1536, NULL, 2, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 256, NULL, 2, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 256, NULL, 2, ( xTaskHandle * ) NULL );
+    xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 256, NULL, 2, &TaskHandleScale);
+    xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 256, NULL, 2, &TaskHandleTemperature);
+    vTaskSuspend(&TaskHandleScale);
+    vTaskSuspend(&TaskHandleTemperature);
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
