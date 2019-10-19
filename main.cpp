@@ -11,7 +11,8 @@
 
 
 //#define DEBUGENABLE_TASKJOYSTICK
-//#define DEBUGENABLE_TASKMENU
+#define DEBUGENABLE_TASKMENU
+//#define DEBUGENABLE_TASKMENUSM
 //#define DEBUGENABLE_TASKBEEPER
 //#define DEBUGENABLE_TASKSCALE
 //#define DEBUGENABLE_LOGTEMPERATUREPRINT
@@ -86,6 +87,7 @@ typedef enum  {
     MENU_ACELEROMETRO_SELGRAFICO,
     MENU_ACELEROMETRO_PRINTTEXTO,
     MENU_ACELEROMETRO_PRINTGRAFICO,
+    MENU_ACELEROMETRO_EXIT,
     MENU_RGB_PPAL,
     MENU_RGB_SELR,
     MENU_RGB_SELG,
@@ -187,6 +189,7 @@ void menu_acelerometro_seltexto(enum Cmd_e cmd);
 void menu_acelerometro_selgrafico(enum Cmd_e cmd);
 void menu_acelerometro_printtexto(enum Cmd_e cmd);
 void menu_acelerometro_printgrafico(enum Cmd_e cmd);
+void menu_acelerometro_exit(enum Cmd_e cmd);
 void menu_rgb_ppal(enum Cmd_e cmd);
 void menu_rgb_selr(enum Cmd_e cmd);
 void menu_rgb_selg(enum Cmd_e cmd);
@@ -222,6 +225,7 @@ Tmenuitem menuitems[] = {
     {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_PRINTGRAFICO,menu_acelerometro_selgrafico},
     {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printtexto},
     {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printgrafico},
+    {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_exit},
     {MENU_ACELEROMETRO_PPAL,MENU_SPEAKER_PPAL,MENU_NONE,MENU_NONE,MENU_RGB_SELR,menu_rgb_ppal},
     {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELG,menu_rgb_selr},
     {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELB,menu_rgb_selg},
@@ -489,6 +493,9 @@ void menu_temperatura_ppal(enum Cmd_e cmd)
             lcd.printf("Temperatura");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
+            #ifdef DEBUGENABLE_TASKMENU
+            printf("Menu Temperatura Ppal\r\n");
+            #endif
             break;
         }
 
@@ -518,6 +525,10 @@ void menu_temperatura_seltexto(enum Cmd_e cmd)
             lcd.printf("Grafico");
             lcd.copy_to_lcd(); // update lcd
             menu.sm = MENUSM_LOOP;
+            #ifdef DEBUGENABLE_TASKMENU
+            printf("Menu Temperatura Elegir Texto\r\n");
+            #endif
+
             break;
         }
 
@@ -544,6 +555,10 @@ void menu_temperatura_selgrafico(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Grafico <");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU
+            printf("Menu Temperatura Elegir Grafico\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -571,9 +586,10 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
             lcd.cls();
             lcd.printf("Temperatura:");
             lcd.copy_to_lcd();
-            #ifdef DEBUGENABLE_LOGTEMPERATUREPRINT
-            printf("Temperatura. Modo Texto. Inicio.\r\n",f);
+            #ifdef DEBUGENABLE_TASKMENU
+            printf("Menu Temperatura TEXTO\r\n");
             #endif
+
             vTaskResume(TaskHandleTemperature);
             menu.sm = MENUSM_LOOP;
             //xSemaphoreGive(xSemaphoreTemperatura);
@@ -596,16 +612,6 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
                 lcd.copy_to_lcd();
             }
 
-             /*
-            ciclos++;
-            if (ciclos > 20) {
-                vTaskResume(&TaskHandleTemperature);
-                #ifdef DEBUGENABLE_LOGTEMPERATUREPRINT
-                printf("Intentando resumir TaskTemperatura\r\n",f);
-                #endif
-                ciclos = 0;
-            }
-            */
 
             break;
         }
@@ -632,11 +638,13 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
-            menu.sm = MENUSM_LOOP;
             scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
             //xSemaphoreGive(xSemaphoreTemperatura);
             vTaskResume(TaskHandleTemperature);
-
+            #ifdef DEBUGENABLE_TASKMENU
+            printf("Menu Temperatura GRAFICO\r\n");
+            #endif
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
@@ -677,17 +685,16 @@ void menu_temperatura_exit(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            //printf("temperatura exit\r\n");
-            if( xSemaphoreTake( xSemaphoreTemperatura, ( TickType_t ) 10 ) == pdTRUE )
-            {
-                menu.sm = MENUSM_LOOP;
-                printf("Semaforo temperatura tomado\r\n");
-            }
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Temperatura Exit\r\n");
+            #endif
+            vTaskSuspend(TaskHandleTemperature);
+            menu.idx_tmp = MENU_TEMPERATURA_PPAL;
             break;
         }
 
         case MENUSM_LOOP: {
-            menu.idx_tmp = MENU_ACELEROMETRO_PPAL;
+            menu.idx_tmp = MENU_TEMPERATURA_PPAL;
             break;
         }
 
@@ -707,6 +714,10 @@ void menu_acelerometro_ppal(enum Cmd_e cmd)
             lcd.locate(24, 10);
             lcd.printf("Acelerometro");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Principal\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -736,6 +747,11 @@ void menu_acelerometro_seltexto(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Grafico");
             lcd.copy_to_lcd(); // update lcd
+
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Texto\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -764,6 +780,10 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Grafico <");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Grafico\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -776,6 +796,8 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
 };
 
 
+
+
 void menu_acelerometro_printtexto(enum Cmd_e cmd)
 {
     if (cmd == CMD_INITIALIZE) {
@@ -783,7 +805,10 @@ void menu_acelerometro_printtexto(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Print Texto\r\n");
+            #endif
+            menu.sm = MENUSM_LOOP;
             break;
         }
 
@@ -802,11 +827,40 @@ void menu_acelerometro_printgrafico(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Print Grafico\r\n");
+            #endif
+            menu.sm = MENUSM_LOOP;
 
             break;
         }
 
         case MENUSM_LOOP: {
+            break;
+        }
+
+    }
+};
+
+
+void menu_acelerometro_exit(enum Cmd_e cmd)
+{
+    if (cmd == CMD_INITIALIZE) {
+        menu.sm = MENUSM_INITIALIZE;
+    }
+
+    switch(menu.sm) {
+        case MENUSM_INITIALIZE: {
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Acelerometro Exit\r\n");
+            #endif
+            vTaskSuspend(TaskHandleAcelerometro);
+            menu.idx_tmp = MENU_ACELEROMETRO_PPAL;
+            break;
+        }
+
+        case MENUSM_LOOP: {
+            
             break;
         }
 
@@ -826,6 +880,10 @@ void menu_rgb_ppal(enum Cmd_e cmd)
             lcd.locate(44, 10);
             lcd.printf("RGB");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu RGB Ppal\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -864,6 +922,7 @@ void menu_rgb_selr(enum Cmd_e cmd)
 
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            
             if (menu.updatestatus != 1) {
                 lcd.cls();
                 lcd.set_font((unsigned char*) Small_7);
@@ -1017,10 +1076,13 @@ void menu_rgb_exit(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             // inicializamos todo para que al proximo ingreso al menu de seleccion se actualice la pantalla
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu RGB exit\r\n");
+            #endif
             menu.r_ant = -menu.r;
             menu.b_ant = -menu.b;
             menu.g_ant = -menu.g;
-            menu.idx_tmp = MENU_SPEAKER_PPAL;
+            menu.idx_tmp = MENU_RGB_PPAL;
             break;
         }
 
@@ -1043,6 +1105,11 @@ void menu_speaker_ppal(enum Cmd_e cmd)
             lcd.locate(50, 10);
             lcd.printf("Speaker");
             lcd.copy_to_lcd(); // update lcd
+
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Speaker Principal\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1078,6 +1145,11 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
             lcd.printf("  none   ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP1;
+
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Speaker Bip1\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1119,6 +1191,10 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP2;
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Speaker Bip2\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1161,6 +1237,9 @@ void menu_speaker_selbip3(enum Cmd_e cmd)
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP3;
             menu.sm = MENUSM_LOOP;
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Speaker Bip3\r\n");
+            #endif
             sound=0;
 
             break;
@@ -1199,6 +1278,10 @@ void menu_speaker_selbipnone(enum Cmd_e cmd)
             lcd.printf("> none <");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIPNONE;
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Speaker BipNone\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1224,6 +1307,9 @@ void menu_signals_ppal(enum Cmd_e cmd)
             lcd.locate(34, 10);
             lcd.printf("Signals");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Principal\r\n");
+            #endif
             menu.sm = MENUSM_LOOP;
 
             break;
@@ -1253,6 +1339,11 @@ void menu_signals_selsquarewave(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Sinusoidal");
             lcd.copy_to_lcd(); // update lcd
+
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Seleccionado Square\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -1283,6 +1374,10 @@ void menu_signals_selsinewave(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Sinusoidal <");
             lcd.copy_to_lcd(); // update lcd
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Seleccionado Seno\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -1310,9 +1405,13 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             menu.grafico.historysize = 0;
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
-            menu.sm = MENUSM_LOOP;
             //xSemaphoreGive(xSemaphoreScale);
             vTaskResume(TaskHandleScale);
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Print Square\r\n");
+            #endif
+            menu.sm = MENUSM_LOOP;
+
             break;
         }
 
@@ -1373,6 +1472,10 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
             //xSemaphoreGive(xSemaphoreScale);
             vTaskResume(TaskHandleScale);
 
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Print Sinusoidal\r\n");
+            #endif
+
             menu.sm = MENUSM_LOOP;
             break;
         }
@@ -1420,8 +1523,12 @@ void menu_signals_exit(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
+            #ifdef DEBUGENABLE_TASKMENU            
+            printf("Menu Signals Exit\r\n");
+            #endif
+
             vTaskSuspend(TaskHandleScale);
-            menu.idx_tmp = MENU_RGB_SELR;
+            menu.idx_tmp = MENU_SIGNALS_PPAL;
             break;
         }
 
@@ -1615,6 +1722,7 @@ void Task_Menu (void* pvParameters)
     
     // Tomar semaforos para que las tareas no se bloqueen
 
+/*
     while ( xSemaphoreTake( xSemaphoreScale, ( TickType_t ) 10 ) != pdTRUE ) {
         vTaskDelay(100);
     }
@@ -1634,27 +1742,27 @@ void Task_Menu (void* pvParameters)
     //#ifdef DEBUGENABLE_TASKMENU
     printf("<Task Menu: Semaforo Acelerometro Tomado>\r\n");
     //#endif
-
+*/
 
     for (;;) {
         led1= !led1;
-        #ifdef DEBUGENABLE_TASKMENU
-        //printf("<Task Menu: Queue elements=");
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
+        printf("<Task Menu: Queue elements=");
         #endif
         queueelements = uxQueueMessagesWaiting(xKeysQueue);
-        #ifdef DEBUGENABLE_TASKMENU
-        //printf("%d\r\n",queueelements);
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
+        printf("%d\r\n",queueelements);
         #endif
         key = KEY_NONE;
         if (0 < queueelements) {
             // La cola tiene mensaje(s)
             xQueueStatus = xQueueReceive(xKeysQueue, &key, 5);
             if (xQueueStatus == pdPASS) {
-                #ifdef DEBUGENABLE_TASKMENU
+                #ifdef DEBUGENABLE_TASKMENUDETAIL
                 printf(" <KeyRead= %d>\r\n",key);
                 #endif
             } else {
-                #ifdef DEBUGENABLE_TASKMENU
+                #ifdef DEBUGENABLE_TASKMENUDETAIL
                 printf(" QueKey Read Error\r\n");
                 #endif
             }
@@ -1688,7 +1796,7 @@ void Task_Menu (void* pvParameters)
             }
         }
         
-        #ifdef DEBUGENABLE_TASKMENU
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("MenuTMP = %d\r\n",menu.idx_tmp);
         #endif
 
@@ -1697,7 +1805,7 @@ void Task_Menu (void* pvParameters)
         if (menu.idx_tmp != MENU_NONE) {
             if (menu.idx_tmp != menu.idx) {
                 // Se debe pasar de menu
-        #ifdef DEBUGENABLE_TASKMENU
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("Cambio de Menu\r\n",menu.idx_tmp);
         #endif
                 menu.idx = menu.idx_tmp;
@@ -1706,14 +1814,14 @@ void Task_Menu (void* pvParameters)
                 (*menuitem->func_ptr)(CMD_INITIALIZE);
 
             } else {
-        #ifdef DEBUGENABLE_TASKMENU
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("Mismo Menu. ");
         #endif
                 (*menuitem->func_ptr)(CMD_NONE);
             }
         }
     
-        #ifdef DEBUGENABLE_TASKMENU
+        #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("Menu IDX=%d SM=%d idx_tmp=%d\r\n",menu.idx, menu.sm, menu.idx_tmp);
         #endif
 
