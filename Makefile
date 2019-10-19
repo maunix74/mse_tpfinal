@@ -367,6 +367,7 @@ $(PROJECT).bin: $(PROJECT).elf
 	+@echo "===== bin file ready to flash: $(OBJDIR)/$@ =====" 
 	echo $@
 	cp $@ /media/mgiovagnini/MBED/
+	sync
 $(PROJECT).hex: $(PROJECT).elf
 	$(ELF2BIN) -O ihex $< $@
 

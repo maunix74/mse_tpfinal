@@ -20,9 +20,9 @@
 
 
 // creo que hay bugs en las librerias al acceder a perifericos se cuelgan y no resumen las tareas
-#define DISABLE_LOGICARTOSACELEROMETRO
+//#define DISABLE_LOGICARTOSACELEROMETRO
 //#define DISABLE_LOGICARTOSTEMPERATURA
-#define DISABLE_LOGICARTOSSCALE
+//#define DISABLE_LOGICARTOSSCALE
 
 
 DigitalOut led1(LED1);
@@ -171,6 +171,78 @@ typedef struct Tscale {
 
 Tmenu menu;
 
+
+
+// MENUS
+void menu_temperatura_ppal(enum Cmd_e cmd);
+void menu_temperatura_seltexto(enum Cmd_e cmd);
+void menu_temperatura_selgrafico(enum Cmd_e cmd);
+void menu_temperatura_printtexto(enum Cmd_e cmd);
+void menu_temperatura_printgrafico(enum Cmd_e cmd);
+void menu_temperatura_exit(enum Cmd_e cmd);
+void menu_acelerometro_ppal(enum Cmd_e cmd);
+void menu_acelerometro_seltexto(enum Cmd_e cmd);
+void menu_acelerometro_selgrafico(enum Cmd_e cmd);
+void menu_acelerometro_printtexto(enum Cmd_e cmd);
+void menu_acelerometro_printgrafico(enum Cmd_e cmd);
+void menu_rgb_ppal(enum Cmd_e cmd);
+void menu_rgb_selr(enum Cmd_e cmd);
+void menu_rgb_selg(enum Cmd_e cmd);
+void menu_rgb_selb(enum Cmd_e cmd);
+void menu_rgb_exit(enum Cmd_e cmd);
+void menu_speaker_ppal(enum Cmd_e cmd);
+void menu_speaker_selbip1(enum Cmd_e cmd);
+void menu_speaker_selbip2(enum Cmd_e cmd);
+void menu_speaker_selbip3(enum Cmd_e cmd);
+void menu_speaker_selbipnone(enum Cmd_e cmd);
+void menu_signals_ppal(enum Cmd_e cmd);
+void menu_signals_selsquarewave(enum Cmd_e cmd);
+void menu_signals_selsinewave(enum Cmd_e cmd);
+void menu_signals_printsquarewave(enum Cmd_e cmd);
+void menu_signals_printsinewave(enum Cmd_e cmd);
+void menu_rgb_rmenos(enum Cmd_e cmd);
+void menu_rgb_rmas(enum Cmd_e cmd);
+void menu_rgb_gmenos(enum Cmd_e cmd);
+void menu_rgb_gmas(enum Cmd_e cmd);
+void menu_rgb_bmenos(enum Cmd_e cmd);
+void menu_rgb_bmas(enum Cmd_e cmd);
+
+Tmenuitem menuitems[] = {
+    {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
+    {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto},
+    {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_PRINTGRAFICO,menu_temperatura_selgrafico},
+    {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printtexto},
+    {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printgrafico},
+    {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_exit},
+    {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_ACELEROMETRO_SELTEXTO,menu_acelerometro_ppal},
+    {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_PRINTTEXTO,menu_acelerometro_seltexto},
+    {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_PRINTGRAFICO,menu_acelerometro_selgrafico},
+    {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printtexto},
+    {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printgrafico},
+    {MENU_ACELEROMETRO_PPAL,MENU_SPEAKER_PPAL,MENU_NONE,MENU_NONE,MENU_RGB_SELR,menu_rgb_ppal},
+    {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELG,menu_rgb_selr},
+    {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELB,menu_rgb_selg},
+    {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_RGB_EXIT,menu_rgb_selb},
+    {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_exit},
+    {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_NONE,MENU_NONE,MENU_SPEAKER_SELBIP1,menu_speaker_ppal},
+    {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP2,MENU_SPEAKER_SELBIPNONE,MENU_SIGNALS_PPAL,menu_speaker_selbip1},
+    {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP3,MENU_SPEAKER_SELBIP1,MENU_SIGNALS_PPAL,menu_speaker_selbip2},
+    {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip3},
+    {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbipnone},
+    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_SIGNALS_SELSQUAREWAVE,menu_signals_ppal},
+    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_PRINTSQUAREWAVE,menu_signals_selsquarewave},
+    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave},
+    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave},
+    {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave},
+    {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos},
+    {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas},
+    {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos},
+    {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmas},
+    {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmenos},
+    {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas}
+};
+
+
 QueueHandle_t xScaleQueue;
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
@@ -178,11 +250,12 @@ QueueHandle_t xTemperatureQueue;
 
 TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
-TaskHandle_t TaskHandleMenu;
+TaskHandle_t TaskHandleAcelerometro;
 
 SemaphoreHandle_t xSemaphoreTemperatura = NULL;
 SemaphoreHandle_t xSemaphoreAcelerometro = NULL;
 SemaphoreHandle_t xSemaphoreScale = NULL;
+
 
 
 //-------------------------------------------
@@ -394,40 +467,6 @@ const unsigned char Arial12x12[] = {
 
 
 
-// MENUS
-void menu_temperatura_ppal(enum Cmd_e cmd);
-void menu_temperatura_seltexto(enum Cmd_e cmd);
-void menu_temperatura_selgrafico(enum Cmd_e cmd);
-void menu_temperatura_printtexto(enum Cmd_e cmd);
-void menu_temperatura_printgrafico(enum Cmd_e cmd);
-void menu_temperatura_exit(enum Cmd_e cmd);
-void menu_acelerometro_ppal(enum Cmd_e cmd);
-void menu_acelerometro_seltexto(enum Cmd_e cmd);
-void menu_acelerometro_selgrafico(enum Cmd_e cmd);
-void menu_acelerometro_printtexto(enum Cmd_e cmd);
-void menu_acelerometro_printgrafico(enum Cmd_e cmd);
-void menu_rgb_ppal(enum Cmd_e cmd);
-void menu_rgb_selr(enum Cmd_e cmd);
-void menu_rgb_selg(enum Cmd_e cmd);
-void menu_rgb_selb(enum Cmd_e cmd);
-void menu_rgb_exit(enum Cmd_e cmd);
-void menu_speaker_ppal(enum Cmd_e cmd);
-void menu_speaker_selbip1(enum Cmd_e cmd);
-void menu_speaker_selbip2(enum Cmd_e cmd);
-void menu_speaker_selbip3(enum Cmd_e cmd);
-void menu_speaker_selbipnone(enum Cmd_e cmd);
-void menu_signals_ppal(enum Cmd_e cmd);
-void menu_signals_selsquarewave(enum Cmd_e cmd);
-void menu_signals_selsinewave(enum Cmd_e cmd);
-void menu_signals_printsquarewave(enum Cmd_e cmd);
-void menu_signals_printsinewave(enum Cmd_e cmd);
-void menu_rgb_rmenos(enum Cmd_e cmd);
-void menu_rgb_rmas(enum Cmd_e cmd);
-void menu_rgb_gmenos(enum Cmd_e cmd);
-void menu_rgb_gmas(enum Cmd_e cmd);
-void menu_rgb_bmenos(enum Cmd_e cmd);
-void menu_rgb_bmas(enum Cmd_e cmd);
-
 
 void menu_temperatura_ppal(enum Cmd_e cmd)
 {
@@ -527,9 +566,9 @@ void menu_temperatura_printtexto(enum Cmd_e cmd)
             #ifdef DEBUGENABLE_LOGTEMPERATUREPRINT
             printf("Temperatura. Modo Texto. Inicio.\r\n",f);
             #endif
-            //vTaskResume(&TaskHandleTemperature);
+            vTaskResume(TaskHandleTemperature);
             menu.sm = MENUSM_LOOP;
-            xSemaphoreGive(xSemaphoreTemperatura);
+            //xSemaphoreGive(xSemaphoreTemperatura);
             ciclos = 0;
             break;
         }
@@ -587,7 +626,8 @@ void menu_temperatura_printgrafico(enum Cmd_e cmd)
             menu.grafico.x_pos = 0.0;
             menu.sm = MENUSM_LOOP;
             scale_y = CTE_ALTODISPLAY/(CTE_TEMPERATURAMAXIMA-CTE_TEMPERATURAMINIMA);
-            xSemaphoreGive(xSemaphoreTemperatura);
+            //xSemaphoreGive(xSemaphoreTemperatura);
+            vTaskResume(TaskHandleTemperature);
 
             break;
         }
@@ -1514,42 +1554,9 @@ void Task_Menu (void* pvParameters)
     BaseType_t xQueueStatus;
     uint8_t key, key_ant;
     UBaseType_t queueelements;
-    Tmenuitem menuitems[] = {
-        {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
-        {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_SELGRAFICO,MENU_TEMPERATURA_PRINTTEXTO,menu_temperatura_seltexto},
-        {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_SELTEXTO,MENU_TEMPERATURA_PRINTGRAFICO,menu_temperatura_selgrafico},
-        {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printtexto},
-        {MENU_TEMPERATURA_EXIT,MENU_TEMPERATURA_EXIT,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_printgrafico},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_temperatura_exit},
-        {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_ACELEROMETRO_SELTEXTO,menu_acelerometro_ppal},
-        {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_SELGRAFICO,MENU_ACELEROMETRO_PRINTTEXTO,menu_acelerometro_seltexto},
-        {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_SELTEXTO,MENU_ACELEROMETRO_PRINTGRAFICO,menu_acelerometro_selgrafico},
-        {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printtexto},
-        {MENU_TEMPERATURA_PPAL,MENU_RGB_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_acelerometro_printgrafico},
-        {MENU_ACELEROMETRO_PPAL,MENU_SPEAKER_PPAL,MENU_NONE,MENU_NONE,MENU_RGB_SELR,menu_rgb_ppal},
-        {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELG,menu_rgb_selr},
-        {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_RGB_SELB,menu_rgb_selg},
-        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_RGB_EXIT,menu_rgb_selb},
-        {MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_exit},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_NONE,MENU_NONE,MENU_SPEAKER_SELBIP1,menu_speaker_ppal},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP2,MENU_SPEAKER_SELBIPNONE,MENU_SIGNALS_PPAL,menu_speaker_selbip1},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP3,MENU_SPEAKER_SELBIP1,MENU_SIGNALS_PPAL,menu_speaker_selbip2},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIPNONE,MENU_SPEAKER_SELBIP2,MENU_SIGNALS_PPAL,menu_speaker_selbip3},
-        {MENU_RGB_PPAL,MENU_SIGNALS_PPAL,MENU_SPEAKER_SELBIP1,MENU_SPEAKER_SELBIP3,MENU_SIGNALS_PPAL,menu_speaker_selbipnone},
-        {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_SIGNALS_SELSQUAREWAVE,menu_signals_ppal},
-        {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_SELSINEWAVE,MENU_SIGNALS_PRINTSQUAREWAVE,menu_signals_selsquarewave},
-        {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_SELSQUAREWAVE,MENU_SIGNALS_PRINTSINEWAVE,menu_signals_selsinewave},
-        {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsquarewave},
-        {MENU_SPEAKER_PPAL,MENU_TEMPERATURA_PPAL,MENU_NONE,MENU_NONE,MENU_NONE,menu_signals_printsinewave},
-        {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmenos},
-        {MENU_RGB_RMENOS,MENU_RGB_RMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_rmas},
-        {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmenos},
-        {MENU_RGB_GMENOS,MENU_RGB_GMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_gmas},
-        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmenos},
-        {MENU_RGB_BMENOS,MENU_RGB_BMAS,MENU_NONE,MENU_NONE,MENU_NONE,menu_rgb_bmas}
-    };
 
     Tmenuitem * menuitem;
+    uint8_t char_input;
 
     menu.sm  = MENUSM_INITIALIZE;
     menu.idx = MENU_TEMPERATURA_PPAL;
@@ -1600,7 +1607,7 @@ void Task_Menu (void* pvParameters)
 
 
     for (;;) {
-        led3= !led3;
+        led1= !led1;
         #ifdef DEBUGENABLE_TASKMENU
         //printf("<Task Menu: Queue elements=");
         #endif
@@ -1623,6 +1630,26 @@ void Task_Menu (void* pvParameters)
             }
         }
 
+        scanf(" %c", &char_input);
+        //if (char_input = getchar()); {
+        //    led2 != led2;
+        //}
+//        /*
+        if (char_input != 0) {
+            switch(char_input) {
+            case '1': {vTaskResume(TaskHandleTemperature); break;}
+            case '2': {vTaskResume(TaskHandleScale); break;}
+            case '3': {vTaskResume(TaskHandleAcelerometro); break;}
+            case '4': {vTaskSuspend(TaskHandleTemperature); break;}
+            case '5': {vTaskSuspend(TaskHandleScale); break;}
+            case '6f': {vTaskSuspend(TaskHandleAcelerometro); break;}
+
+
+            }
+        }
+//        */
+
+
         if (key != key_ant) {
             switch(key) {
                 case KEY_UP: {menu.idx_tmp = menuitem->keyup; break;}
@@ -1631,7 +1658,7 @@ void Task_Menu (void* pvParameters)
                 case KEY_RIGHT: {menu.idx_tmp = menuitem->keyright; break;}
                 case KEY_PUSH: {menu.idx_tmp = menuitem->keyfire; break;}
             }
-        } 
+        }
         
         #ifdef DEBUGENABLE_TASKMENU
         printf("MenuTMP = %d\r\n",menu.idx_tmp);
@@ -1678,7 +1705,6 @@ void Task_Joystick (void* pvParameters)
 
     (void) pvParameters;
     for (;;) {
-        led1 = !led1;
         key_read = joy;
         switch(key_read) {
             case 0: key = KEY_NONE; break;   // key_none
@@ -1769,14 +1795,14 @@ void Task_Scale (void* pvParameters)
             }
             xSemaphoreGive(xSemaphoreScale);
         }
-        vTaskDelay(1000);
+        vTaskDelay(500);
     }
 }
 
 
 
 
-
+/*
 void Task_Temperatura (void* pvParameters)
 {
     BaseType_t xStatus;
@@ -1815,6 +1841,38 @@ void Task_Temperatura (void* pvParameters)
         vTaskDelay(1000);
     }
 }
+*/
+
+
+
+
+void Task_Temperatura (void* pvParameters)
+{
+    BaseType_t xStatus;
+    float f;
+
+    led4 = 0; 
+    (void) pvParameters;                    // Just to stop compiler warnings.
+    if (!sensortemperatura.open()) {
+        printf("Sensor Temperatura no presente\r\n");
+//        vTaskSuspend(NULL);
+    }
+    for (;;) {
+        led3 = !led3;
+        f = sensortemperatura.temp();
+        xStatus = xQueueSendToBack(xTemperatureQueue, &f,0);
+        if (xStatus != pdPASS) {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
+            printf("<xScaleQueue. Error agregando elemento a la cola.\r\n");
+    #endif
+        } else {
+    #ifdef DEBUGENABLE_LOGTEMPQUEUELOGS
+                printf("<Temp=%.1f grados leidos del sensor. Agregado a la cola.\r\n",f);
+    #endif
+        }
+        vTaskDelay(500);
+    }
+}
 
 
 void Task_Acelerometro (void* pvParameters)
@@ -1825,6 +1883,7 @@ void Task_Acelerometro (void* pvParameters)
     led4 = 0; 
     (void) pvParameters;                    // Just to stop compiler warnings.
     for (;;) {
+        led4 = !led4;
         if( xSemaphoreTake( xSemaphoreAcelerometro, ( TickType_t ) 10 ) == pdTRUE ) {
             printf("Leer Acelerometro\r\n",f);
             xSemaphoreGive( xSemaphoreAcelerometro );
@@ -1847,7 +1906,7 @@ int main (void)
     xSemaphoreScale = xSemaphoreCreateMutex();
     xTaskCreate( Task_Joystick, ( const char * ) "Task Joystick", 192, NULL, 1, ( xTaskHandle * ) NULL );
     xTaskCreate( Task_Beeper, ( const char * ) "TaskBepper", 256, NULL, 1, ( xTaskHandle * ) NULL );
-    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1532, NULL, 3, &TaskHandleMenu);
+    xTaskCreate( Task_Menu, ( const char * ) "TaskMenu", 1532, NULL, 3, ( xTaskHandle * ) NULL);
     #ifndef DISABLE_LOGICARTOSSCALE
     xTaskCreate( Task_Scale, ( const char * ) "Task Scale", 128, NULL, 2, &TaskHandleScale);
     #endif
@@ -1855,10 +1914,11 @@ int main (void)
     xTaskCreate( Task_Temperatura, ( const char * ) "Task Temperatura", 1024, NULL, 2, &TaskHandleTemperature);
     #endif
     #ifndef DISABLE_LOGICARTOSACELEROMETRO
-    xTaskCreate( Task_Acelerometro, ( const char * ) "Task Acelerometro", 512, NULL, 2, NULL);
+    xTaskCreate( Task_Acelerometro, ( const char * ) "Task Acelerometro", 512, NULL, 2, &TaskHandleAcelerometro);
     #endif
-    //vTaskSuspend(&TaskHandleScale);
-    //vTaskSuspend(&TaskHandleTemperature);
+    vTaskSuspend(TaskHandleScale);
+    vTaskSuspend(TaskHandleTemperature);
+    vTaskSuspend(TaskHandleAcelerometro);
     printf("\r\nTrabajo Final Arquitecturas Embebidas y Procesamiento en Tiempo Real\r\n");
 
     vTaskStartScheduler();
