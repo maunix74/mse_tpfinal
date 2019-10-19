@@ -1909,11 +1909,9 @@ void Task_Acelerometro (void* pvParameters)
     Acelerometro_t accel;
 
     led4 = 0; 
-    while(1) {
-       if (!mma.testConnection()) {
-           vTaskSuspend(NULL);
-           printf("MMA7669 no detectado.\r\n");
-       }
+    if(!mma.testConnection()) {
+        printf("MMA7660 no detectado.\r\n");
+        //vTaskSuspend(NULL);
     }
   
     (void) pvParameters;                    // Just to stop compiler warnings.
