@@ -1502,7 +1502,8 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
 
                 if (((menu.grafico.y_pos > 0) && (y_ant < 0)) ||
                     ((menu.grafico.y_pos < 0) && (y_ant > 0))) {
-                    lcd.rect(menu.grafico.x_pos,menu.grafico.historia[menu.grafico.idx_puntoactual],menu.grafico.x_pos,menu.grafico.historia[menu.grafico.idx_puntoactual-1],1);
+                    //printf("Salto y1=%d, y2=%d\r\n",menu.grafico.historia[menu.grafico.idx_puntoactual],menu.grafico.historia[menu.grafico.idx_puntoactual-1]);
+                    lcd.rect(menu.grafico.idx_puntoactual,menu.grafico.historia[menu.grafico.idx_puntoactual],menu.grafico.idx_puntoactual,menu.grafico.historia[menu.grafico.idx_puntoactual-1],1);
                 }
                 y_ant = menu.grafico.y_pos;
                 menu.grafico.idx_puntoactual++;
@@ -1510,12 +1511,14 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             } else {
                 lcd.cls();
                 for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
-                    menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
                     lcd.pixel(loop,menu.grafico.historia[loop],1);
+                    //printf("Salto y1=%d, y2=%d\r\n",menu.grafico.historia[loop+1] ,menu.grafico.historia[loop] );
                     if (((menu.grafico.historia[loop+1] > 16) && (menu.grafico.historia[loop] < 16)) ||
                         ((menu.grafico.historia[loop+1] < 16) && (menu.grafico.historia[loop] > 16))) {
-                         lcd.rect(loop,menu.grafico.historia[menu.grafico.idx_puntoactual],loop,menu.grafico.historia[menu.grafico.idx_puntoactual+1],1);                            
+                        lcd.rect(loop,menu.grafico.historia[menu.grafico.idx_puntoactual],loop,menu.grafico.historia[menu.grafico.idx_puntoactual-1],1);
+
                     }
+                    menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
                 }
                 menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
                 if (menu.grafico.y_pos >= 0) menu.grafico.y_pos = 1.0; else menu.grafico.y_pos = -1.0;
