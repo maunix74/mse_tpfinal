@@ -10,7 +10,11 @@
 //#include "debug_usb.h"
 
 
-#define DISABLE_USART
+/* Aquí las directivas de preprocesador para habilitar/deshabilitar partes del código
+  segun interese probar una cosa u otra */
+
+
+#define DISABLE_USART               // Para utilizar el puerto stdio como interfaz de entrada de datos, simulando asi el joystick
 //#define DEBUGENABLE_TASKJOYSTICK
 #define DEBUGENABLE_TASKMENU
 //#define DEBUGENABLE_TASKMENUSM
@@ -21,11 +25,7 @@
 //#define DEBUGENABLE_LOGTEMPQUEUELOGS
 #define DEBUGENABLE_TASKSTARTED
 
-
-// creo que hay bugs en las librerias al acceder a perifericos se cuelgan y no resumen las tareas
-//#define DISABLE_LOGICARTOSACELEROMETRO
-//#define DISABLE_LOGICARTOSTEMPERATURA
-//#define DISABLE_LOGICARTOSSCALE
+/* Definicion de las variables globales que utilizan los periféricos del KIT */
 
 
 DigitalOut led1(LED1);
@@ -44,20 +44,26 @@ PwmOut r(p23);
 PwmOut g(p24);
 PwmOut b(p25);
 
-#define CTE_RGBINCREMENT 0.1
-#define CTE_HISTORYSIZE  120
-#define CTE_XSTEPMIN 5.0
-#define CTE_XSTEPMAX 30.0
-#define CTE_YSCALEMIN 0.2
-#define CTE_YSCALEMAX 1.0
-#define CTE_CANTBIPSENMENUSLECCION  3
 
-#define CTE_XSTEPSQUAREMIN 5.0
+
+#define CTE_RGBINCREMENT 0.1       // Incremento del PWM-RGB por cada pulsacion del joystick en la tarea
+#define CTE_HISTORYSIZE  120       // Tamaño del historial de los gráficos
+// Grafica Sinusoidal
+#define CTE_XSTEPMIN 5.0           // Limites máximo y mínimo de escala en X del gráfico sobre los cuales se moverán los ajustes de los potenciometros
+#define CTE_XSTEPMAX 30.0
+#define CTE_YSCALEMIN 0.2          // Limites máximo y mínimo de escala en Y del gráfico sobre los cuales se moverán los ajustes de los potenciometros
+#define CTE_YSCALEMAX 1.0
+#define CTE_CANTBIPSENMENUSLECCION  3   // Ciclos de ingreso al menú que esperará sin sonar
+
+// Grafica Cuadratica
+#define CTE_XSTEPSQUAREMIN 5.0     //
 #define CTE_XSTEPSQUAREMAX 20.0
 
+
+// Límites de la Gráfica de temperatura.
 #define CTE_TEMPERATURAMAXIMA  33
-#define CTE_TEMPERATURAMINIMA  24 
-#define CTE_ALTODISPLAY        32
+#define CTE_TEMPERATURAMINIMA  24
+#define CTE_ALTODISPLAY        32    // Cantidad de filas del display
 
 
 typedef enum  {
@@ -137,11 +143,13 @@ typedef struct Tmenuitem {
 
 
 typedef struct {
-    enum MenuSm_e sm;
-    uint8_t idx;
-    uint8_t idx_ant; // para saber si debo inicializar o no o si estoy en el mismo menu
-    uint8_t idx_tmp;  // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
+    enum MenuSm_e sm;  // Máquina de estados de cada submenu
+    uint8_t idx;       // Número de índice del menú activo en cada momento.
+    uint8_t idx_ant;   // para saber si debo inicializar o no o si estoy en el mismo menu
+    uint8_t idx_tmp;   // variable temporal para alojar la posible seleccion del menu al pulsar una tecla
     Beeps bip;
+
+    // Valores de PWM para el led RGB
     float r;
     float r_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
     float g;
@@ -150,6 +158,7 @@ typedef struct {
     float b_ant;  // Usado para mejorar el refresco de pantalla y actualizar solo si es necesario
     uint8_t updatestatus;  // indica el estado del update de pantalla para saber si debo reimprimir el menu o no
 
+    // Utilizadas en la graficacion de señales para los calculos temporales
     struct {
        float x_scale;
        float y_scale;
@@ -161,13 +170,6 @@ typedef struct {
     } grafico;
 } Tmenu;
 
-/*
-struct {
-    int x_loop;
-    int y_result; 
-    float y_temp;
-} grafico;
-*/
 
 typedef struct Tscale {
     float x_scale;
@@ -178,7 +180,8 @@ Tmenu menu;
 
 
 
-// MENUS
+// MENUS - Lista generada con la planilla docs/menu.ods
+
 void menu_temperatura_ppal(enum Cmd_e cmd);
 void menu_temperatura_seltexto(enum Cmd_e cmd);
 void menu_temperatura_selgrafico(enum Cmd_e cmd);
@@ -213,6 +216,9 @@ void menu_rgb_gmenos(enum Cmd_e cmd);
 void menu_rgb_gmas(enum Cmd_e cmd);
 void menu_rgb_bmenos(enum Cmd_e cmd);
 void menu_rgb_bmas(enum Cmd_e cmd);
+
+// Lista completa opciones de menu disponibles con sus opciones de navegacion
+// MENUS - Lista generada con la planilla docs/menu.ods
 
 Tmenuitem menuitems[] = {
     {MENU_SIGNALS_PPAL,MENU_ACELEROMETRO_PPAL,MENU_NONE,MENU_NONE,MENU_TEMPERATURA_SELTEXTO,menu_temperatura_ppal},
@@ -255,11 +261,16 @@ typedef struct {
     float x, y, z;
 } Acelerometro_t;
 
+
+// Colas del sistema
+
 QueueHandle_t xScaleQueue;
 QueueHandle_t xKeysQueue;
 QueueHandle_t xBeeperQueue;
 QueueHandle_t xTemperatureQueue;
 QueueHandle_t xAcelerometroQueue;
+
+// Controladores de las tareas que serán manipuladas (detenidas y reanudadas)
 
 TaskHandle_t TaskHandleScale;
 TaskHandle_t TaskHandleTemperature;
@@ -268,10 +279,12 @@ TaskHandle_t TaskHandleAcelerometro;
 
 
 //-------------------------------------------
-// FONTS
+// Fuentes del LCD
 //-------------------------------------------
 // Small 7
-// 
+//
+
+
 const unsigned char Small_7[] = {
     19,9,9,2,                                    // Length,horz,vert,byte/vert
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Code for char
@@ -678,7 +691,7 @@ void menu_temperatura_exit(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Temperatura Exit\r\n");
             #endif
             vTaskSuspend(TaskHandleTemperature);
@@ -707,7 +720,7 @@ void menu_acelerometro_ppal(enum Cmd_e cmd)
             lcd.locate(24, 10);
             lcd.printf("Acelerometro");
             lcd.copy_to_lcd(); // update lcd
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Principal\r\n");
             #endif
 
@@ -741,7 +754,7 @@ void menu_acelerometro_seltexto(enum Cmd_e cmd)
             lcd.printf("Grafico");
             lcd.copy_to_lcd(); // update lcd
 
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Texto\r\n");
             #endif
 
@@ -773,7 +786,7 @@ void menu_acelerometro_selgrafico(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Grafico <");
             lcd.copy_to_lcd(); // update lcd
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Grafico\r\n");
             #endif
 
@@ -801,7 +814,7 @@ void menu_acelerometro_printtexto(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Print Texto\r\n");
             #endif
             vTaskResume(TaskHandleAcelerometro);
@@ -841,7 +854,7 @@ void menu_acelerometro_printgrafico(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Print Grafico\r\n");
             #endif
             vTaskResume(TaskHandleAcelerometro);
@@ -858,7 +871,11 @@ void menu_acelerometro_printgrafico(enum Cmd_e cmd)
                 lcd.locate(55,10);
                 lcd.printf(":Y:");
                 lcd.locate(55,20);
-                lcd.printf(":Z:");
+                lcd.printf(":Z:");}
+
+                // Cada barra X,Y,Z se grafica a derecha o izquierda del texto
+                // Dependiendo de si su valor es positivo o negativo
+                // El largo de la barra dependerá del valor del sensor
                 if (accel_read.x > 0) {
                     delta_axis = accel_read.x / 0.03;
                     for(loop=0;loop<delta_axis;loop++) {
@@ -915,7 +932,7 @@ void menu_acelerometro_exit(enum Cmd_e cmd)
 
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Acelerometro Exit\r\n");
             #endif
             vTaskSuspend(TaskHandleAcelerometro);
@@ -924,7 +941,7 @@ void menu_acelerometro_exit(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
-            
+
             break;
         }
 
@@ -944,7 +961,7 @@ void menu_rgb_ppal(enum Cmd_e cmd)
             lcd.locate(44, 10);
             lcd.printf("RGB");
             lcd.copy_to_lcd(); // update lcd
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu RGB Ppal\r\n");
             #endif
 
@@ -953,7 +970,7 @@ void menu_rgb_ppal(enum Cmd_e cmd)
         }
 
         case MENUSM_LOOP: {
-            
+
             break;
         }
 
@@ -974,8 +991,8 @@ void fcn_graphbarrapje(int x_start, int y_start, float pje)
         x += 0.01;
         loop+=1;
     }
-    
-   
+
+
 }
 
 void menu_rgb_selr(enum Cmd_e cmd)
@@ -986,7 +1003,7 @@ void menu_rgb_selr(enum Cmd_e cmd)
 
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            
+
             if (menu.updatestatus != 1) {
                 lcd.cls();
                 lcd.set_font((unsigned char*) Small_7);
@@ -1053,17 +1070,17 @@ void menu_rgb_selg(enum Cmd_e cmd)
             if (menu.r != menu.r_ant) {
                 fcn_graphbarrapje(15,0,menu.r);
                 menu.r_ant = menu.r;
-            }   
+            }
 
             if (menu.g != menu.g_ant) {
                 fcn_graphbarrapje(15,11,menu.g);
                 menu.g_ant = menu.g;
-            }   
+            }
 
             if (menu.b != menu.b_ant) {
                 fcn_graphbarrapje(15,21,menu.b);
                 menu.b_ant = menu.b;
-            }   
+            }
 
             lcd.copy_to_lcd(); // update lcd
             r = menu.r;
@@ -1103,17 +1120,17 @@ void menu_rgb_selb(enum Cmd_e cmd)
             if (menu.r != menu.r_ant) {
                 fcn_graphbarrapje(15,0,menu.r);
                 menu.r_ant = menu.r;
-            }   
+            }
 
             if (menu.g != menu.g_ant) {
                 fcn_graphbarrapje(15,11,menu.g);
                 menu.g_ant = menu.g;
-            }   
+            }
 
             if (menu.b != menu.b_ant) {
                 fcn_graphbarrapje(15,21,menu.b);
                 menu.b_ant = menu.b;
-            }   
+            }
 
             lcd.copy_to_lcd(); // update lcd
             r = menu.r;
@@ -1140,7 +1157,7 @@ void menu_rgb_exit(enum Cmd_e cmd)
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
             // inicializamos todo para que al proximo ingreso al menu de seleccion se actualice la pantalla
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu RGB exit\r\n");
             #endif
             menu.r_ant = -menu.r;
@@ -1170,7 +1187,7 @@ void menu_speaker_ppal(enum Cmd_e cmd)
             lcd.printf("Speaker");
             lcd.copy_to_lcd(); // update lcd
 
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Speaker Principal\r\n");
             #endif
 
@@ -1210,7 +1227,7 @@ void menu_speaker_selbip1(enum Cmd_e cmd)
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP1;
 
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Speaker Bip1\r\n");
             #endif
 
@@ -1255,7 +1272,7 @@ void menu_speaker_selbip2(enum Cmd_e cmd)
             lcd.printf("  none  ");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP2;
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Speaker Bip2\r\n");
             #endif
 
@@ -1301,7 +1318,7 @@ void menu_speaker_selbip3(enum Cmd_e cmd)
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIP3;
             menu.sm = MENUSM_LOOP;
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Speaker Bip3\r\n");
             #endif
             sound=0;
@@ -1342,7 +1359,7 @@ void menu_speaker_selbipnone(enum Cmd_e cmd)
             lcd.printf("> none <");
             lcd.copy_to_lcd(); // update lcd
             menu.bip = KEY_BIPNONE;
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Speaker BipNone\r\n");
             #endif
 
@@ -1371,7 +1388,7 @@ void menu_signals_ppal(enum Cmd_e cmd)
             lcd.locate(34, 10);
             lcd.printf("Signals");
             lcd.copy_to_lcd(); // update lcd
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Principal\r\n");
             #endif
             menu.sm = MENUSM_LOOP;
@@ -1404,7 +1421,7 @@ void menu_signals_selsquarewave(enum Cmd_e cmd)
             lcd.printf("Sinusoidal");
             lcd.copy_to_lcd(); // update lcd
 
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Seleccionado Square\r\n");
             #endif
 
@@ -1438,7 +1455,7 @@ void menu_signals_selsinewave(enum Cmd_e cmd)
             lcd.locate(30, 20);
             lcd.printf("Sinusoidal <");
             lcd.copy_to_lcd(); // update lcd
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Seleccionado Seno\r\n");
             #endif
 
@@ -1474,7 +1491,7 @@ void menu_signals_printsquarewave(enum Cmd_e cmd)
             menu.grafico.idx_puntoactual = 0;
             menu.grafico.x_pos = 0.0;
             vTaskResume(TaskHandleScale);
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Print Square\r\n");
             #endif
             menu.sm = MENUSM_LOOP;
@@ -1553,7 +1570,7 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
             menu.grafico.x_pos = 0.0;
             vTaskResume(TaskHandleScale);
 
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Print Sinusoidal\r\n");
             #endif
 
@@ -1564,13 +1581,18 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
         case MENUSM_LOOP: {
             xQueueStatus = xQueueReceive(xScaleQueue, &scale, 5);
             if (xQueueStatus == pdPASS) {
-                // Update del scale x e y
+                // Update del scale x e y para el gráfico
+                // El x_scale definirá el salto en radianes por cada cálculo
+                // El y_scale definirá la altura en % de un máximo a
                 menu.grafico.x_scale = CTE_XSTEPMIN + scale.x_scale*(CTE_XSTEPMAX-CTE_XSTEPMIN);
                 menu.grafico.y_scale = CTE_YSCALEMIN + scale.y_scale*(CTE_YSCALEMAX - CTE_YSCALEMIN);
             }
-//            if (menu.grafico.historysize < CTE_HISTORYSIZE) {
+
             if (menu.grafico.idx_puntoactual < CTE_HISTORYSIZE) {
+// Grafica de la señal mientras se está llenando la pantalla y hay menos puntos que el tamaño de la misma
                 menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
+                // 16 es el valor medio del lcd
+                // 14 es la escala de altura (hacia arriba y abajo) que tendrá el gráfico para estar centrado
                 y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
                 menu.grafico.historia[menu.grafico.idx_puntoactual] = y;
                 menu.grafico.x_pos += menu.grafico.x_scale;
@@ -1579,10 +1601,12 @@ void menu_signals_printsinewave(enum Cmd_e cmd)
                 lcd.copy_to_lcd(); // update lcd
             } else {
                 lcd.cls();
+// Efecto Scroll. Muevo los valores anteriores un lugar hacia abajo del array
                 for(loop=0;loop<CTE_HISTORYSIZE-1;loop++) {
                     menu.grafico.historia[loop] = menu.grafico.historia[loop+1];
                     lcd.pixel(loop,menu.grafico.historia[loop],1);
                 }
+// grafico el ultimo punto de acuerdo al nuevo valor calculado
                 menu.grafico.y_pos = sin(menu.grafico.x_pos*3.14/180);
                 y = round(16 + menu.grafico.y_pos * menu.grafico.y_scale * 14);
                 menu.grafico.historia[CTE_HISTORYSIZE-1] = y;
@@ -1604,7 +1628,7 @@ void menu_signals_exit(enum Cmd_e cmd)
     }
     switch(menu.sm) {
         case MENUSM_INITIALIZE: {
-            #ifdef DEBUGENABLE_TASKMENU            
+            #ifdef DEBUGENABLE_TASKMENU
             printf("Menu Signals Exit\r\n");
             #endif
 
@@ -1774,7 +1798,7 @@ void Task_Menu (void* pvParameters)
     UBaseType_t queueelements;
 
     Tmenuitem * menuitem;
-    
+
 #ifndef DISABLE_USART
     uint8_t char_input;
 #endif
@@ -1785,7 +1809,7 @@ void Task_Menu (void* pvParameters)
     menu.r = 0.50;
     menu.g = 0.50;
     menu.b = 0.50;
-    // para forzar un primer update 
+    // para forzar un primer update
     menu.r_ant = 0.1;
     menu.g_ant = 0.1;
     menu.b_ant = 0.1;
@@ -1802,9 +1826,9 @@ void Task_Menu (void* pvParameters)
     menuitem += menu.idx;
     (*menuitem->func_ptr)(CMD_INITIALIZE);
     key_ant = KEY_NONE;
-   
+
     (void) pvParameters;                    // Just to stop compiler warnings.
-    
+
     // Tomar semaforos para que las tareas no se bloqueen
 
 
@@ -1832,7 +1856,7 @@ void Task_Menu (void* pvParameters)
                 #endif
             }
         }
-
+// Esta parte la uso cunado no tengo el kit con display y quiero simular las pulsaciones del joystick
 #ifndef DISABLE_USART
         scanf(" %c", &char_input);
         //if (char_input = getchar()); {
@@ -1861,10 +1885,14 @@ void Task_Menu (void* pvParameters)
                 case KEY_PUSH: {menu.idx_tmp = menuitem->keyfire; break;}
             }
         }
-        
+
         #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("MenuTMP = %d\r\n",menu.idx_tmp);
         #endif
+
+// Busco la posición del menú elegida
+// Si es diferente a la anterior se ejecutará su funcion con el comando de inicializacion CMD_INITIALIZE
+// Sino se ejecutara la funcion con el comando CMD_NONE para continuar el flujo normal de la ejecucion
 
         menuitem = &menuitems[0];
         menuitem += menu.idx;
@@ -1886,7 +1914,7 @@ void Task_Menu (void* pvParameters)
                 (*menuitem->func_ptr)(CMD_NONE);
             }
         }
-    
+
         #ifdef DEBUGENABLE_TASKMENUDETAIL
         printf("Menu IDX=%d SM=%d idx_tmp=%d\r\n",menu.idx, menu.sm, menu.idx_tmp);
         #endif
@@ -1944,7 +1972,7 @@ void Task_Beeper (void* pvParameters)
 {
     BaseType_t xQueueStatus;
     UBaseType_t queueelements;
-    uint8_t beeper; 
+    uint8_t beeper;
     (void) pvParameters;
     for (;;) {
         queueelements = uxQueueMessagesWaiting(xBeeperQueue);
@@ -2007,7 +2035,7 @@ void Task_Temperatura (void* pvParameters)
     BaseType_t xStatus;
     float f;
 
-    led4 = 0; 
+    led4 = 0;
     (void) pvParameters;                    // Just to stop compiler warnings.
     if (!sensortemperatura.open()) {
         printf("Sensor Temperatura no presente\r\n");
@@ -2036,12 +2064,12 @@ void Task_Acelerometro (void* pvParameters)
     BaseType_t xStatus;
     Acelerometro_t accel;
 
-    led4 = 0; 
+    led4 = 0;
     if(!mma.testConnection()) {
         printf("MMA7660 no detectado.\r\n");
         //vTaskSuspend(NULL);
     }
-  
+
     (void) pvParameters;                    // Just to stop compiler warnings.
 
     for (;;) {
@@ -2050,7 +2078,7 @@ void Task_Acelerometro (void* pvParameters)
         accel.z = mma.z();
         accel.x = mma.x();
         accel.y = mma.y();
-        
+
         xStatus = xQueueSendToBack(xAcelerometroQueue, &accel,0);
         if (xStatus != pdPASS) {
     #ifdef DEBUGENABLE_LOGTEMPQUEUEERRORS
